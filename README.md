@@ -9,17 +9,22 @@ vMeltype は、雪解けのように半角/全角の壁を溶かす日本語入�
 
 ## 取得する
 
-[Releases](https://github.com/otnc/vMeltype/releases) から `vMeltype-<バージョン>-windows.zip` を取得し、展開した `vmeltype.exe` を PATH の通った場所に置きます。
+[Releases](https://github.com/otnc/vMeltype/releases) から、次のどちらかを取得します。
+
+- インストーラー `vMeltype-<バージョン>-setup.exe`: 本家の setup.exe と同じく、管理者権限を使わずに `%LOCALAPPDATA%\Programs\vMeltype` に入れ、PATH に足します。「設定 → アプリ」から削除できます
+- ZIP `vMeltype-<バージョン>-windows.zip`: 展開した `vmeltype.exe` を、PATH の通った好きな場所に置きます
 
 vMeltype はコード署名をしていないので、初めて実行するときに Windows の SmartScreen の警告が出ることがあります。代わりに、このリポジトリの GitHub Actions が作ったものかを、次のどちらかで確かめられます。
 
 ```powershell
 # GitHub の証明 (artifact attestation) を確かめる。GitHub CLI が要る
-gh attestation verify vMeltype-0.1.0-pre.1-windows.zip -R otnc/vMeltype
+gh attestation verify vMeltype-0.1.0-setup.exe -R otnc/vMeltype
 
 # リリースに置いた .sha256 と比べる
-Get-FileHash vMeltype-0.1.0-pre.1-windows.zip -Algorithm SHA256
+Get-FileHash vMeltype-0.1.0-setup.exe -Algorithm SHA256
 ```
+
+`vmeltype app update` は、インストーラーで入れたものならインストーラーを、ZIP から入れたものなら ZIP を取得して更新します。
 
 ## 使い方
 
@@ -59,12 +64,14 @@ vmeltype app update         # vMeltype 自身を新しいバージョンにす�
 vmeltype app uninstall      # self uninstall でも同じ
 ```
 
-管理ルートを消します。Meltype も削除するか (既定は残す) と、スナップショットも削除するか (既定は消す) を聞きます。
+インストーラーで入れたなら、「設定 → アプリ」から vMeltype を削除しても同じです。管理ルートを消します。Meltype も削除するか (既定は残す) と、スナップショットも削除するか (既定は消す) を聞きます。
 
 - Meltype を残すなら、いまのバージョンをそのまま使える状態で残し、本家の自動更新を管理前の値に戻します
 - Meltype も削除するなら、本家のアンインストーラーを使います。本家の Install.cmd や vMeltype だけで入れた Meltype は、設定と学習データも消えます
 
-いま動いている `vmeltype.exe` は消せないので、終わったあとに手で消してください。
+インストーラーで入れたものは、`vmeltype.exe`、PATH、「設定 → アプリ」の登録も消します。ZIP から入れたものは、いま動いている `vmeltype.exe` を消せないので、終わったあとに手で消してください。
+
+「設定 → アプリ」からの削除は、上の 2 つを画面で聞いてから管理ルートを片付けます。片付けられなければ、何も消さずに中止します。画面なしの削除 (`unins000.exe /VERYSILENT`) では聞かず、Meltype とスナップショットを残します。
 
 ## 開発
 
