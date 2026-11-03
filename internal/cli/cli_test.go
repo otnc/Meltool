@@ -2,6 +2,8 @@ package cli
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -24,17 +26,45 @@ func executeIn(t *testing.T, root string, args ...string) result {
 	return result{code: code, stdout: stdout.String(), stderr: stderr.String()}
 }
 
-func TestRunWithoutArgumentsShowsHelp(t *testing.T) {
-	got := execute(t)
+func TestRunWithoutArguments(t *testing.T) {
+	t.Run("有効なバージョンとヘルプを表示する", func(t *testing.T) {
+		l := managedStandard(t)
 
-	if got.code != ExitOK {
-		t.Fatalf("code = %d, want %d (stderr: %s)", got.code, ExitOK, got.stderr)
-	}
-	for _, want := range []string{"使い方:", "コマンド:", "install", "use", "releases"} {
-		if !strings.Contains(got.stdout, want) {
-			t.Errorf("ヘルプに %q がない:\n%s", want, got.stdout)
+		got := l.run(t, false, "")
+
+		if got.code != ExitOK {
+			t.Fatalf("code = %d, want %d (stderr: %s)", got.code, ExitOK, got.stderr)
 		}
-	}
+		for _, want := range []string{"有効なバージョン: v1.4.0", "使い方:", "コマンド:", "install", "use", "releases"} {
+			if !strings.Contains(got.stdout, want) {
+				t.Errorf("%q がない:\n%s", want, got.stdout)
+			}
+		}
+	})
+	t.Run("管理ルートがなければ作らず、有効なバージョンがないことを示す", func(t *testing.T) {
+		l := newLocalEnv(t)
+		os.Remove(l.root)
+
+		got := l.run(t, false, "")
+
+		if got.code != ExitOK || !strings.Contains(got.stdout, "有効なバージョンはありません") || !strings.Contains(got.stdout, "使い方:") {
+			t.Errorf("code = %d\n%s%s", got.code, got.stdout, got.stderr)
+		}
+		if _, err := os.Stat(l.root); !os.IsNotExist(err) {
+			t.Errorf("管理ルートを作った")
+		}
+	})
+	t.Run("状態を読めなくても、警告してヘルプを表示する", func(t *testing.T) {
+		l := newLocalEnv(t)
+		os.MkdirAll(filepath.Join(l.root, "state"), 0o700)
+		os.WriteFile(filepath.Join(l.root, "state", "active.json"), []byte("{壊れている"), 0o600)
+
+		got := l.run(t, false, "")
+
+		if got.code != ExitOK || !strings.Contains(got.stderr, "警告:") || !strings.Contains(got.stdout, "使い方:") {
+			t.Errorf("code = %d\n%s%s", got.code, got.stdout, got.stderr)
+		}
+	})
 }
 
 func TestHelpHidesUnimplementedCommands(t *testing.T) {

@@ -144,8 +144,13 @@ install で取得して保持し、use で有効にします。use、list、curr
 		DisableFlagsInUseLine: true,
 		SilenceErrors:         true,
 		SilenceUsage:          true,
-		// 引数なしでは、何も変更せずにヘルプを表示する
-		RunE:              func(cmd *cobra.Command, _ []string) error { return cmd.Help() },
+		// 引数なしでは、何も変更せず、通信もせずに、ローカルの状態とヘルプを表示する
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			if err := writeLocalStatus(cmd, env); err != nil {
+				env.warnf("いまの状態を読めませんでした: %v", err)
+			}
+			return cmd.Help()
+		},
 		CompletionOptions: cobra.CompletionOptions{DisableDefaultCmd: true},
 	}
 	// v はバージョンの指定と紛らわしいので、--version の短縮形にしない
