@@ -107,3 +107,73 @@ func TestReplaceWithoutScript(t *testing.T) {
 		t.Errorf("Replace = %q, %v", got, err)
 	}
 }
+
+// completeFunction は、登録のあとに一覧へ足す処理の代わり。本物は利用者のキーボードの一覧を変えるので、テストでは必ず差し替える。
+const completeFunction = `
+function Complete-VmeltypeImeRegistration { [IO.File]::AppendAllText($record, '|completed') }
+`
+
+func TestRegister(t *testing.T) {
+	tests := []struct {
+		name       string
+		functions  string
+		want       Result
+		wantRecord string
+	}{
+		{
+			name: "本家の Invoke-Elevated で登録し、キーボードの一覧に足す",
+			functions: commonFunctions + completeFunction + `function Test-MeltypeImeCurrent([string]$Source) { return $false }
+function Invoke-Elevated([string]$Source, [hashtable]$Hashes, [string]$Mode) { [IO.File]::AppendAllText($record, "$Mode"); return 'ok' }`,
+			want:       ResultRegistered,
+			wantRecord: "Register|completed",
+		},
+		{
+			name: "同じ DLL を置いてあれば、管理者権限を求めずに一覧に足す",
+			functions: commonFunctions + completeFunction + `function Test-MeltypeImeCurrent([string]$Source) { return $true }
+function Invoke-Elevated { [IO.File]::AppendAllText($record, 'elevated'); return 'ok' }`,
+			want:       ResultRegistered,
+			wantRecord: "|completed",
+		},
+		{
+			name: "UAC で断られたら、一覧に足さない",
+			functions: commonFunctions + completeFunction + `function Test-MeltypeImeCurrent([string]$Source) { return $false }
+function Invoke-Elevated { return 'cancelled' }`,
+			want: ResultCanceled,
+		},
+		{
+			name: "一覧に足せなければ、登録はしたことを返す",
+			functions: commonFunctions + `function Complete-VmeltypeImeRegistration { throw '足せません' }
+function Test-MeltypeImeCurrent([string]$Source) { return $false }
+function Invoke-Elevated { return 'ok' }`,
+			want: ResultUnlisted,
+		},
+		{
+			name: "DLL が壊れていれば、管理者権限を求めない",
+			functions: completeFunction + `function Test-Arm64Windows { return $false }
+function Get-MeltypeImeSourceHashes([string]$Source) { return $null }
+function Test-MeltypeImeCurrent([string]$Source) { return $false }
+function Invoke-Elevated { [IO.File]::AppendAllText($record, 'elevated'); return 'ok' }`,
+			want: ResultCorrupt,
+		},
+		{
+			name:      "本家の関数がなければ、対応していないことを返す",
+			functions: completeFunction + `function Test-Arm64Windows { return $false }`,
+			want:      ResultUnsupported,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			appDir, record := fakeAppDir(t, tt.functions)
+
+			got, err := Register(context.Background(), appDir)
+
+			if err != nil || got != tt.want {
+				t.Fatalf("Register = %q, %v; want %q", got, err, tt.want)
+			}
+			data, _ := os.ReadFile(record)
+			if string(data) != tt.wantRecord {
+				t.Errorf("記録 = %q, want %q", data, tt.wantRecord)
+			}
+		})
+	}
+}

@@ -36,6 +36,8 @@ vmeltype use 1.4.0          # 保持したバージョンに切り替える。�
 vmeltype check              # 新しいバージョンがあるかを確かめる
 vmeltype update             # 新しいバージョンを取得して切り替える (upgrade でも同じ)
 vmeltype rollback           # 直前のバージョンに戻す
+vmeltype apply              # 有効なバージョンを、保持したものから修復する。通信しない
+vmeltype apply --ime        # 通常版で Meltype IME を登録していなければ登録する。既定の入力方式は変えない
 vmeltype pin                # いまのバージョンから切り替えないよう固定する
 vmeltype snapshot create    # Meltype のデータを保存する
 vmeltype snapshot export <id> data.vmeltype-snapshot  # 保存したデータを 1 つのファイルにする。別の PC で import できる

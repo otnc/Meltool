@@ -1,6 +1,6 @@
-// Package winime は、本家の Meltype IME の DLL を、切り替え先のバージョンのものに入れ替える。
-// 入れ替えは、切り替え先のバージョンに入っている本家の meltype-ime.ps1 の関数に任せる。本家は、DLL を管理者だけが書き換えられる場所に写して
-// hash を確かめてから、管理者として登録する。入力方式の一覧と既定の入力方式は変えない。
+// Package winime は、本家の Meltype IME の DLL を、切り替え先のバージョンのものに入れ替えるか、新しく登録する。
+// 登録は、切り替え先のバージョンに入っている本家の meltype-ime.ps1 の関数に任せる。本家は、DLL を管理者だけが書き換えられる場所に写して
+// hash を確かめてから、管理者として登録する。入れ替えでは入力方式の一覧を変えず、どちらでも既定の入力方式は変えない。
 package winime
 
 // Result は、入れ替えの結果。
@@ -11,6 +11,10 @@ const (
 	ResultCurrent Result = "current"
 	// ResultReplaced は、DLL を入れ替えて登録し直したこと。
 	ResultReplaced Result = "replaced"
+	// ResultRegistered は、新しく登録し、日本語のキーボードの一覧に足したこと。
+	ResultRegistered Result = "registered"
+	// ResultUnlisted は、新しく登録したが、日本語のキーボードの一覧に足せなかったこと。
+	ResultUnlisted Result = "unlisted"
 	// ResultCanceled は、管理者権限の確認 (UAC) で断られたこと。
 	ResultCanceled Result = "cancelled"
 	// ResultFailed は、管理者として動いた登録が失敗したこと。

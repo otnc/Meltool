@@ -34,6 +34,22 @@ func DisableAutoUpdate(path string) (Original, error) {
 	return setAutoUpdate(path, false)
 }
 
+// AutoUpdateDisabled は、本家の自動更新が止まっているかを返す。項目かファイルがなければ、本家の既定の true で動いているとみなす。
+func AutoUpdateDisabled(path string) (bool, error) {
+	data, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("本家の設定を読めませんでした: %w", err)
+	}
+	body := bytes.TrimPrefix(data, utf8BOM)
+	if !gjson.ValidBytes(body) || !gjson.ParseBytes(body).IsObject() {
+		return false, fmt.Errorf("本家の設定 (%s) が JSON のオブジェクトとして読めません", path)
+	}
+	return gjson.GetBytes(body, autoUpdateKey).Type == gjson.False, nil
+}
+
 // RestoreAutoUpdate は、本家の自動更新を、DisableAutoUpdate が記録した管理前の値に戻す。管理前に項目がなければ、本家の既定の true にする。
 // ほかの項目、並び、空白は変えない。ファイルがなければ、本家が次の起動で既定の設定を作るので、何もしない。
 // 呼び出し側は、書き換えの間に本家が保存しないよう、Meltype を止めておく。

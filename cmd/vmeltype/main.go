@@ -75,6 +75,9 @@ func main() {
 		ReplaceIME: func(appDir string) (winime.Result, error) {
 			return winime.Replace(ctx, appDir)
 		},
+		RegisterIME: func(appDir string) (winime.Result, error) {
+			return winime.Register(ctx, appDir)
+		},
 		Executable:        os.Executable,
 		FindInstallation:  selfinstall.Find,
 		RunSetup:          selfinstall.RunSetup,

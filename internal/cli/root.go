@@ -50,6 +50,8 @@ type Env struct {
 	IMERegistered func() (bool, error)
 	// InstalledTipHashes は、登録されている Meltype IME の DLL のハッシュを、CPU (x64、x86) ごとに返す。
 	InstalledTipHashes func() (map[string]string, error)
+	// RegisterIME は、Meltype IME を、appDir (有効なバージョンの、本家の ZIP の app に当たるディレクトリ) の資材で新しく登録し、日本語のキーボードの一覧に足す。
+	RegisterIME func(appDir string) (winime.Result, error)
 	// ReplaceIME は、登録済みの Meltype IME の DLL を、appDir (切り替え先のバージョンの、本家の ZIP の app に当たるディレクトリ) のものに入れ替える。
 	ReplaceIME func(appDir string) (winime.Result, error)
 	// SetDisplayVersion は、本家が「設定 → アプリ」に登録した、インストール先が appDir の Meltype の項目のバージョンを書き換える。登録がなければ何もしない。
