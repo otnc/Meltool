@@ -24,18 +24,32 @@ var platformSuffixes = map[[2]string]string{
 	{"windows", "amd64"}: "windows",
 }
 
-// Select は、current より新しいバージョンのうち、この端末の配布物があるものの最大を返す。いまより古いバージョンには下げない。
+// Kind は、配布物の種類。いまの vmeltype.exe の入れ方に合わせて選ぶ。
+type Kind int
+
+const (
+	// Archive は、vmeltype.exe を入れた ZIP。ZIP から入れたものは、vmeltype.exe を置き換えて更新する。
+	Archive Kind = iota
+	// Setup は、インストーラー (setup.exe)。インストーラーで入れたものは、入れ直して更新する。Windows にだけある。
+	Setup
+)
+
+// Select は、current より新しいバージョンのうち、この端末の kind の配布物があるものの最大を返す。いまより古いバージョンには下げない。
 // includePre が false なら正式版だけから選ぶ。
-func Select(releases []catalog.Release, current string, includePre bool, goos, goarch string) (catalog.Release, catalog.Asset, bool) {
+func Select(releases []catalog.Release, current string, includePre bool, goos, goarch string, kind Kind) (catalog.Release, catalog.Asset, bool) {
 	suffix, ok := platformSuffixes[[2]string{goos, goarch}]
-	if !ok {
+	if !ok || (kind == Setup && goos != "windows") {
 		return catalog.Release{}, catalog.Asset{}, false
 	}
 	assetOf := map[string]catalog.Asset{}
 	byTag := map[string]catalog.Release{}
 	var candidates []versions.Candidate
 	for _, r := range releases {
-		want := fmt.Sprintf("vMeltype-%s-%s.zip", strings.TrimPrefix(r.Tag, "v"), suffix)
+		version := strings.TrimPrefix(r.Tag, "v")
+		want := fmt.Sprintf("vMeltype-%s-%s.zip", version, suffix)
+		if kind == Setup {
+			want = fmt.Sprintf("vMeltype-%s-setup.exe", version)
+		}
 		for _, a := range r.Assets {
 			if a.Name == want {
 				assetOf[r.Tag] = a
@@ -84,6 +98,32 @@ func Apply(exe, archive string) error {
 		return fmt.Errorf("新しい vmeltype.exe を置けなかったので、元に戻しました: %w", err)
 	}
 	return nil
+}
+
+// ApplySetup は、照合済みの setup.exe を動かす install で、exe を入れ直す。
+// setup.exe が動いている vmeltype.exe を上書きできるよう、いまの exe を exe.old に退避してから install を呼ぶ。
+// install が失敗するか、exe を置かなければ、退避したものを戻す。
+func ApplySetup(exe string, install func() error) error {
+	old := exe + ".old"
+	if err := os.Remove(old); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("前の更新で退避した %s を消せませんでした: %w", old, err)
+	}
+	if err := os.Rename(exe, old); err != nil {
+		return fmt.Errorf("いまの vmeltype.exe を退避できませんでした: %w", err)
+	}
+	err := install()
+	if err == nil {
+		if _, statErr := os.Stat(exe); statErr == nil {
+			return nil
+		}
+		err = errors.New("インストーラーが vmeltype.exe を置きませんでした")
+	}
+	// インストーラーが途中まで置いたものがあれば、退避したものに戻す
+	os.Remove(exe)
+	if undoErr := os.Rename(old, exe); undoErr != nil {
+		return fmt.Errorf("インストーラーで更新できず、元にも戻せませんでした。%s を %s に名前を変えてください: %w", old, exe, errors.Join(err, undoErr))
+	}
+	return fmt.Errorf("インストーラーで更新できなかったので、元に戻しました: %w", err)
 }
 
 // Cleanup は、前の更新で退避した vmeltype.exe を消す。動いている間は消せないので、次に vMeltype を使ったときに呼ぶ。消せなくても困らない。

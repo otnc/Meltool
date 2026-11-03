@@ -3,6 +3,7 @@ package selfupdate
 import (
 	"archive/zip"
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -24,21 +25,25 @@ func TestSelect(t *testing.T) {
 		release("v0.1.0", false, "vMeltype-0.1.0-windows.zip"),
 		release("v0.2.0-pre.1", true, "vMeltype-0.2.0-pre.1-windows.zip"),
 		release("v0.3.0", false, "vMeltype-0.3.0-linux.zip"),
+		release("v0.4.0-pre.1", true, "vMeltype-0.4.0-pre.1-windows.zip", "vMeltype-0.4.0-pre.1-setup.exe"),
 	}
 	tests := []struct {
 		name       string
 		current    string
 		includePre bool
+		kind       Kind
 		wantAsset  string
 	}{
 		{name: "正式版の中で新しいものを選ぶ", current: "0.1.0-pre.1", wantAsset: "vMeltype-0.1.0-windows.zip"},
-		{name: "--pre ならプレリリースも含める", current: "0.1.0", includePre: true, wantAsset: "vMeltype-0.2.0-pre.1-windows.zip"},
-		{name: "この端末の配布物がないリリースは選ばない", current: "0.2.0-pre.1", includePre: true, wantAsset: ""},
+		{name: "--pre ならプレリリースも含める", current: "0.1.0", includePre: true, wantAsset: "vMeltype-0.4.0-pre.1-windows.zip"},
+		{name: "この端末の配布物がないリリースは選ばない", current: "0.2.0-pre.1", wantAsset: ""},
+		{name: "インストーラーで入れたものは setup.exe を選ぶ", current: "0.1.0", includePre: true, kind: Setup, wantAsset: "vMeltype-0.4.0-pre.1-setup.exe"},
+		{name: "setup.exe がないリリースは、インストーラーで入れたものには選ばない", current: "0.1.0", kind: Setup, wantAsset: ""},
 		{name: "最新なら選ばない", current: "0.1.0", wantAsset: ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, asset, ok := Select(releases, tt.current, tt.includePre, "windows", "amd64")
+			_, asset, ok := Select(releases, tt.current, tt.includePre, "windows", "amd64", tt.kind)
 
 			if ok != (tt.wantAsset != "") || asset.Name != tt.wantAsset {
 				t.Errorf("Select = %q (%v), want %q", asset.Name, ok, tt.wantAsset)
@@ -117,6 +122,44 @@ func TestApply(t *testing.T) {
 		}
 		if _, err := os.Stat(exe + ".old"); err == nil {
 			t.Errorf("失敗したのに退避した")
+		}
+	})
+}
+
+func TestApplySetup(t *testing.T) {
+	t.Run("退避してから setup.exe で入れ直す", func(t *testing.T) {
+		exe := installed(t, "old")
+
+		err := ApplySetup(exe, func() error {
+			if read(exe) != "<なし>" {
+				t.Errorf("動いている exe を退避する前に setup.exe を動かした")
+			}
+			return os.WriteFile(exe, []byte("new"), 0o700)
+		})
+
+		if err != nil {
+			t.Fatal(err)
+		}
+		if read(exe) != "new" || read(exe+".old") != "old" {
+			t.Errorf("exe = %q, old = %q", read(exe), read(exe+".old"))
+		}
+	})
+	t.Run("setup.exe が失敗したら、退避したものを戻す", func(t *testing.T) {
+		exe := installed(t, "old")
+
+		err := ApplySetup(exe, func() error { return errors.New("失敗") })
+
+		if err == nil || read(exe) != "old" {
+			t.Errorf("err = %v, exe = %q", err, read(exe))
+		}
+	})
+	t.Run("setup.exe が成功しても vmeltype.exe を置かなければ、退避したものを戻す", func(t *testing.T) {
+		exe := installed(t, "old")
+
+		err := ApplySetup(exe, func() error { return nil })
+
+		if err == nil || read(exe) != "old" {
+			t.Errorf("err = %v, exe = %q", err, read(exe))
 		}
 	})
 }

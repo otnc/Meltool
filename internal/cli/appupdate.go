@@ -44,7 +44,7 @@ func findSelfUpdate(cmd *cobra.Command, env *Env, pre bool) (catalog.Release, ca
 	if err != nil {
 		return catalog.Release{}, catalog.Asset{}, false, fmt.Errorf("vMeltype のリリースの一覧を取得できませんでした: %w", err)
 	}
-	release, asset, ok := selfupdate.Select(c.Releases(), env.Version, pre, env.Platform.OS, env.Platform.Arch)
+	release, asset, ok := selfupdate.Select(c.Releases(), env.Version, pre, env.Platform.OS, env.Platform.Arch, selfupdate.Archive)
 	return release, asset, ok, nil
 }
 
