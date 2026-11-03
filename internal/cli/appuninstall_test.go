@@ -208,3 +208,60 @@ func TestAppUninstallStopsBeforeChanging(t *testing.T) {
 		})
 	}
 }
+
+func TestAppUninstallWithInstaller(t *testing.T) {
+	t.Run("インストーラーで入れたものは、管理ルートを消したあとに vMeltype のアンインストーラーを起動する", func(t *testing.T) {
+		l := managedStandard(t)
+		l.installed = true
+
+		got := l.run(t, false, "", "app", "uninstall", "-y")
+
+		if got.code != ExitOK || l.uninstallerStarts != 1 {
+			t.Fatalf("code = %d, starts = %d\n%s", got.code, l.uninstallerStarts, got.stderr)
+		}
+		if _, err := os.Stat(l.root); !os.IsNotExist(err) {
+			t.Errorf("管理ルートが残っている")
+		}
+		if strings.Contains(got.stdout, "手で消して") {
+			t.Errorf("アンインストーラーが消すのに、手で消すよう示した:\n%s", got.stdout)
+		}
+	})
+	t.Run("管理ルートがなくても、インストーラーで入れたものはアンインストーラーを起動する", func(t *testing.T) {
+		l := newLocalEnv(t)
+		os.Remove(l.root)
+		l.installed = true
+
+		got := l.run(t, false, "", "app", "uninstall", "-y")
+
+		if got.code != ExitOK || l.uninstallerStarts != 1 {
+			t.Errorf("code = %d, starts = %d\n%s", got.code, l.uninstallerStarts, got.stderr)
+		}
+	})
+	t.Run("アンインストーラーから呼ばれたら、アンインストーラーを起動せず、本家のアンインストーラーを画面ありで動かす", func(t *testing.T) {
+		l := managedStandard(t)
+		l.installed = true
+
+		got := l.run(t, false, "", "app", "uninstall", "--from-installer", "--remove-meltype", "-y")
+
+		if got.code != ExitOK || l.uninstallerStarts != 0 {
+			t.Fatalf("code = %d, starts = %d\n%s", got.code, l.uninstallerStarts, got.stderr)
+		}
+		if len(l.removeCalls) != 1 || !l.removeCalls[0].interactive {
+			t.Errorf("本家のアンインストーラーを画面ありで動かしていない: %+v", l.removeCalls)
+		}
+	})
+	t.Run("--dry-run と、失敗したときは、アンインストーラーを起動しない", func(t *testing.T) {
+		dryRun := managedStandard(t)
+		dryRun.installed = true
+		failed := managedStandard(t)
+		failed.installed = true
+		failed.removeFails = true
+
+		dryRun.run(t, false, "", "app", "uninstall", "--dry-run")
+		failed.run(t, false, "", "app", "uninstall", "--remove-meltype", "-y")
+
+		if dryRun.uninstallerStarts != 0 || failed.uninstallerStarts != 0 {
+			t.Errorf("starts = %d, %d", dryRun.uninstallerStarts, failed.uninstallerStarts)
+		}
+	})
+}

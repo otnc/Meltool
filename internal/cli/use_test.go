@@ -16,6 +16,7 @@ import (
 	"github.com/otnc/vmeltype/internal/appctl"
 	"github.com/otnc/vmeltype/internal/archive"
 	"github.com/otnc/vmeltype/internal/assets"
+	"github.com/otnc/vmeltype/internal/selfinstall"
 	"github.com/otnc/vmeltype/internal/store"
 	"github.com/otnc/vmeltype/internal/winime"
 )
@@ -41,6 +42,9 @@ type localEnv struct {
 	// removeCalls は、本家のアンインストーラーで Meltype の削除を求められた記録。removeFails なら削除に失敗する。
 	removeCalls []removeCall
 	removeFails bool
+	// installed は、vmeltype.exe を vMeltype のインストーラーで入れたことを真似る。uninstallerStarts は、vMeltype のアンインストーラーを起動した回数。
+	installed         bool
+	uninstallerStarts int
 	// outColor と errColor は、標準出力と標準エラーが色を付けられる端末であることを真似る。
 	outColor, errColor bool
 }
@@ -87,6 +91,13 @@ func (l *localEnv) run(t *testing.T, interactive bool, stdin string, args ...str
 				return errors.New("本家のアンインストーラーが失敗しました")
 			}
 			return os.RemoveAll(appDir)
+		},
+		FindInstallation: func(exe string) (selfinstall.Installation, bool, error) {
+			return selfinstall.Installation{Dir: filepath.Dir(exe), Uninstaller: filepath.Join(filepath.Dir(exe), "unins000.exe")}, l.installed, nil
+		},
+		StartUninstaller: func(selfinstall.Installation) error {
+			l.uninstallerStarts++
+			return nil
 		},
 		ReplaceIME: func(appDir string) (winime.Result, error) {
 			l.imeCalls = append(l.imeCalls, imeCall{appDir: appDir, deployed: readFile(filepath.Join(l.standardAppDir(), "Meltype.exe"))})
