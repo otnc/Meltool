@@ -20,7 +20,8 @@ import (
 const appUpdateLong = `vMeltype の新しいバージョンを GitHub のリリース (otnc/vMeltype) から取得し、いま動いている vmeltype.exe を置き換えます。Meltype のバージョンは変えません。
 
 既定は正式版の最新です。--pre を付けたときだけ、プレリリースも含めた最新を選びます。いまより古いバージョンには下げません。
-配布物は GitHub が示す SHA-256 と照合してから置き換えます。前の vmeltype.exe は vmeltype.exe.old に退避し、次の更新で消します。`
+ZIP から入れたものは ZIP を、インストーラーで入れたものはインストーラー (setup.exe) を取得し、GitHub が示す SHA-256 と照合してから使います。インストーラーは画面なしで動かし、前と同じ場所に入れ直します。
+前の vmeltype.exe は vmeltype.exe.old に退避し、次の更新で消します。`
 
 func setupAppUpdateFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool("pre", false, "プレリリースも含めて探す")
@@ -38,13 +39,25 @@ func isDevBuild(version string) bool {
 	return version == "dev" || version == ""
 }
 
-// findSelfUpdate は、vMeltype 自身のリリースから、いまより新しく、この端末の配布物があるものの最大を探す。
-func findSelfUpdate(cmd *cobra.Command, env *Env, pre bool) (catalog.Release, catalog.Asset, bool, error) {
+// selfUpdateKind は、いまの vmeltype.exe の入れ方に合う配布物の種類を返す。
+func selfUpdateKind(env *Env, exe string) (selfupdate.Kind, error) {
+	_, installed, err := env.installation(exe)
+	if err != nil {
+		return selfupdate.Archive, err
+	}
+	if installed {
+		return selfupdate.Setup, nil
+	}
+	return selfupdate.Archive, nil
+}
+
+// findSelfUpdate は、vMeltype 自身のリリースから、いまより新しく、この端末の kind の配布物があるものの最大を探す。
+func findSelfUpdate(cmd *cobra.Command, env *Env, pre bool, kind selfupdate.Kind) (catalog.Release, catalog.Asset, bool, error) {
 	c, err := newRemoteClient(env).Fetch(cmd.Context(), selfupdate.Repository, nil)
 	if err != nil {
 		return catalog.Release{}, catalog.Asset{}, false, fmt.Errorf("vMeltype のリリースの一覧を取得できませんでした: %w", err)
 	}
-	release, asset, ok := selfupdate.Select(c.Releases(), env.Version, pre, env.Platform.OS, env.Platform.Arch)
+	release, asset, ok := selfupdate.Select(c.Releases(), env.Version, pre, env.Platform.OS, env.Platform.Arch, kind)
 	return release, asset, ok, nil
 }
 
@@ -55,7 +68,15 @@ func runAppCheck(env *Env) func(*cobra.Command, []string) error {
 		if isDevBuild(env.Version) {
 			return errors.New("開発中のビルドなので、リリースと比べられません。リリースの vmeltype.exe を使ってください")
 		}
-		release, _, ok, err := findSelfUpdate(cmd, env, pre)
+		exe := ""
+		if env.Executable != nil {
+			exe, _ = env.Executable()
+		}
+		kind, err := selfUpdateKind(env, exe)
+		if err != nil {
+			return err
+		}
+		release, _, ok, err := findSelfUpdate(cmd, env, pre, kind)
 		if err != nil {
 			return err
 		}
@@ -100,8 +121,12 @@ func runAppUpdate(env *Env) func(*cobra.Command, []string) error {
 		if err != nil {
 			return fmt.Errorf("vmeltype.exe の場所が分かりませんでした: %w", err)
 		}
+		kind, err := selfUpdateKind(env, exe)
+		if err != nil {
+			return err
+		}
 
-		release, asset, ok, err := findSelfUpdate(cmd, env, pre)
+		release, asset, ok, err := findSelfUpdate(cmd, env, pre, kind)
 		if err != nil {
 			return err
 		}
@@ -127,8 +152,13 @@ func runAppUpdate(env *Env) func(*cobra.Command, []string) error {
 		fmt.Fprintf(planOut, "いまのバージョン: %s\n", env.Version)
 		fmt.Fprintf(planOut, "新しいバージョン: %s\n", release.Tag)
 		fmt.Fprintf(planOut, "配布物:           %s (%s)\n", asset.Name, formatBytes(asset.Size))
-		fmt.Fprintf(planOut, "置き換え先:       %s\n", exe)
-		fmt.Fprintln(planOut, "GitHub が示す SHA-256 と照合してから置き換えます。Meltype のバージョンは変えません。")
+		if kind == selfupdate.Setup {
+			fmt.Fprintf(planOut, "インストール先:   %s\n", filepath.Dir(exe))
+			fmt.Fprintln(planOut, "GitHub が示す SHA-256 と照合してから、インストーラーを画面なしで動かして入れ直します。Meltype のバージョンは変えません。")
+		} else {
+			fmt.Fprintf(planOut, "置き換え先:       %s\n", exe)
+			fmt.Fprintln(planOut, "GitHub が示す SHA-256 と照合してから置き換えます。Meltype のバージョンは変えません。")
+		}
 		if dryRun {
 			if asJSON {
 				return writeJSON(out, map[string]any{"dryRun": true, "current": env.Version, "latest": release.Tag, "executable": exe})
@@ -140,8 +170,12 @@ func runAppUpdate(env *Env) func(*cobra.Command, []string) error {
 			return err
 		}
 
-		// 置き換えは rename で行うので、取得したものも同じディレクトリ (同じドライブ) に置く
-		archive, err := os.CreateTemp(filepath.Dir(exe), "vmeltype-update-*.zip")
+		// ZIP からの置き換えは rename で行うので、取得したものも同じディレクトリ (同じドライブ) に置く。インストーラーはインストール先の外に置く
+		dir, pattern := filepath.Dir(exe), "vmeltype-update-*.zip"
+		if kind == selfupdate.Setup {
+			dir, pattern = os.TempDir(), "vmeltype-update-*-setup.exe"
+		}
+		archive, err := os.CreateTemp(dir, pattern)
 		if err != nil {
 			return err
 		}
@@ -162,7 +196,13 @@ func runAppUpdate(env *Env) func(*cobra.Command, []string) error {
 		if actual := hex.EncodeToString(hash.Sum(nil)); actual != expected {
 			return fmt.Errorf("%s の SHA-256 が GitHub の期待値と一致しません (期待値 %s、取得したもの %s)。置き換えません", asset.Name, expected, actual)
 		}
-		if err := selfupdate.Apply(exe, archive.Name()); err != nil {
+		if kind == selfupdate.Setup {
+			fmt.Fprintf(cmd.ErrOrStderr(), "%s で入れ直しています...\n", asset.Name)
+			err = selfupdate.ApplySetup(exe, func() error { return env.RunSetup(cmd.Context(), archive.Name()) })
+		} else {
+			err = selfupdate.Apply(exe, archive.Name())
+		}
+		if err != nil {
 			return err
 		}
 		if asJSON {

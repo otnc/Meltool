@@ -1,6 +1,6 @@
 name: リリース
 
-# バージョンを入れて手で起動すると、CI が通った main のコミットから配布物を作り、GitHub のリリースとタグを作って公開する。
+# バージョンを入れて手で起動すると、CI が通った main のコミットから配布物 (ZIP とインストーラー) を作り、GitHub のリリースとタグを作って公開する。
 # 作者がバージョンを入れて起動することを公開の承認とし、下書きは挟まない。バージョンに - があれば (0.1.0-pre.1 など) プレリリースにする
 on:
   workflow_dispatch:
@@ -21,20 +21,18 @@ concurrency:
   group: release
   cancel-in-progress: false
 
+env:
+  VERSION: ${{ inputs.version }}
+
 jobs:
-  release:
-    name: リリースの作成
+  build:
+    name: ZIP の作成
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    permissions:
-      # リリースとタグを作る
-      contents: write
-      # 配布物の証明 (artifact attestation) を作る
-      id-token: write
-      attestations: write
     env:
-      VERSION: ${{ inputs.version }}
       GH_TOKEN: ${{ github.token }}
+    outputs:
+      sha: ${{ steps.check.outputs.sha }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -42,6 +40,7 @@ jobs:
           # main に含まれるかを確かめ、リリースノートで前のバージョンからの変更を並べるので、履歴とタグをすべて取る
           fetch-depth: 0
       - name: バージョンとコミットを確かめる
+        id: check
         run: |
           if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-pre\.[0-9]+)?$ ]]; then
             echo "バージョンは 0.1.0 や 0.1.0-pre.1 の形にしてください: $VERSION"; exit 1
@@ -61,7 +60,7 @@ jobs:
           if [ "$passed" = "0" ]; then
             echo "$sha は main への push の CI が通っていません"; exit 1
           fi
-          echo "SHA=$sha" >> "$GITHUB_ENV"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
@@ -77,14 +76,81 @@ jobs:
           go build -trimpath -ldflags "-s -w -X main.version=$VERSION" -o "dist/$name/vmeltype.exe" ./cmd/vmeltype
           cp LICENSE "dist/$name/LICENSE.txt"
           (cd "dist/$name" && zip -X -q "../$name.zip" vmeltype.exe LICENSE.txt)
-          (cd dist && sha256sum "$name.zip" > "$name.zip.sha256" && cat "$name.zip.sha256")
-          echo "ASSET=dist/$name.zip" >> "$GITHUB_ENV"
+      # インストーラーには、ZIP と同じ vmeltype.exe を入れる
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dist
+          path: dist
+          if-no-files-found: error
+
+  installer:
+    name: インストーラーの作成
+    needs: build
+    runs-on: windows-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.build.outputs.sha }}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist
+      - name: インストーラーを作る
+        run: ./.github/scripts/installer-build.ps1 -Version $env:VERSION -SourceDir "dist\vMeltype-$env:VERSION-windows" -OutputDir setup
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: setup
+          path: setup
+          if-no-files-found: error
+
+  release:
+    name: リリースの作成
+    needs: [build, installer]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      # リリースとタグを作る
+      contents: write
+      # 配布物の証明 (artifact attestation) を作る
+      id-token: write
+      attestations: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SHA: ${{ needs.build.outputs.sha }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.build.outputs.sha }}
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: setup
+          path: dist
+      - name: SHA-256 を書く
+        run: |
+          cd dist
+          for asset in "vMeltype-$VERSION-windows.zip" "vMeltype-$VERSION-setup.exe"; do
+            sha256sum "$asset" > "$asset.sha256"
+            cat "$asset.sha256"
+          done
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
-          subject-path: ${{ env.ASSET }}
+          subject-path: |
+            dist/vMeltype-${{ inputs.version }}-windows.zip
+            dist/vMeltype-${{ inputs.version }}-setup.exe
       - name: リリースを作る
         run: |
           flags=()
           if [[ "$VERSION" == *-* ]]; then flags+=(--prerelease); fi
-          gh release create "v$VERSION" "$ASSET" "$ASSET.sha256" \
+          cd dist
+          gh release create "v$VERSION" \
+            "vMeltype-$VERSION-windows.zip" "vMeltype-$VERSION-windows.zip.sha256" \
+            "vMeltype-$VERSION-setup.exe" "vMeltype-$VERSION-setup.exe.sha256" \
             --target "$SHA" --title "vMeltype $VERSION" --generate-notes "${flags[@]}"
