@@ -29,6 +29,7 @@ Get-FileHash vMeltype-0.1.0-setup.exe -Algorithm SHA256
 ## 使い方
 
 ```powershell
+vmeltype                    # いまの状態 (status と同じ) とヘルプを表示する。通信しない
 vmeltype releases           # 公式のリリースの一覧を表示する
 vmeltype install 1.4.0      # 取得して保持する。有効なバージョンは変えない
 vmeltype use 1.4.0          # 保持したバージョンに切り替える。通信しない
