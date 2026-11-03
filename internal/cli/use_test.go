@@ -21,6 +21,9 @@ import (
 	"github.com/otnc/vmeltype/internal/winime"
 )
 
+// testExecutable は、テストで動いている vmeltype.exe の場所。
+const testExecutable = `C:\tools\vmeltype.exe`
+
 type localEnv struct {
 	root    string
 	running []string
@@ -84,7 +87,7 @@ func (l *localEnv) run(t *testing.T, interactive bool, stdin string, args ...str
 		LocalAppData:       func() (string, error) { return l.localAppData, nil },
 		IMERegistered:      func() (bool, error) { return l.imeRegistered, nil },
 		InstalledTipHashes: func() (map[string]string, error) { return l.installedTip, nil },
-		Executable:         func() (string, error) { return `C:	oolsvmeltype.exe`, nil },
+		Executable:         func() (string, error) { return testExecutable, nil },
 		RemoveMeltype: func(appDir, fallback string, interactive bool) error {
 			l.removeCalls = append(l.removeCalls, removeCall{appDir: appDir, fallback: fallback, interactive: interactive})
 			if l.removeFails {
@@ -92,8 +95,8 @@ func (l *localEnv) run(t *testing.T, interactive bool, stdin string, args ...str
 			}
 			return os.RemoveAll(appDir)
 		},
-		FindInstallation: func(exe string) (selfinstall.Installation, bool, error) {
-			return selfinstall.Installation{Dir: filepath.Dir(exe), Uninstaller: filepath.Join(filepath.Dir(exe), "unins000.exe")}, l.installed, nil
+		FindInstallation: func() (selfinstall.Installation, bool, error) {
+			return selfinstall.Installation{Dir: filepath.Dir(testExecutable), Uninstaller: filepath.Join(filepath.Dir(testExecutable), "unins000.exe")}, l.installed, nil
 		},
 		StartUninstaller: func(selfinstall.Installation) error {
 			l.uninstallerStarts++

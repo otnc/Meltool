@@ -8,7 +8,7 @@ import (
 )
 
 // Find は、Windows 以外では、インストーラーで入れたものを見つけない。
-func Find(string) (Installation, bool, error) {
+func Find() (Installation, bool, error) {
 	return Installation{}, false, nil
 }
 

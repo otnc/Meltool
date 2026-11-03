@@ -4,9 +4,23 @@ package selfinstall
 
 import "testing"
 
-func TestMatch(t *testing.T) {
-	const location = `C:\Users\u\AppData\Local\Programs\vMeltype\`
-	const uninstaller = `"C:\Users\u\AppData\Local\Programs\vMeltype\unins000.exe"`
+func TestParse(t *testing.T) {
+	t.Run("インストール先とアンインストーラーを読む", func(t *testing.T) {
+		inst, ok := parse(`C:\Users\u\AppData\Local\Programs\vMeltype\`, `"C:\Users\u\AppData\Local\Programs\vMeltype\unins000.exe"`)
+
+		if !ok || inst.Dir != `C:\Users\u\AppData\Local\Programs\vMeltype` || inst.Uninstaller != `C:\Users\u\AppData\Local\Programs\vMeltype\unins000.exe` {
+			t.Errorf("inst = %+v, ok = %v", inst, ok)
+		}
+	})
+	t.Run("アンインストーラーの記録がなければ、インストーラーで入れたものとみなさない", func(t *testing.T) {
+		if _, ok := parse(`C:\Users\u\AppData\Local\Programs\vMeltype\`, ""); ok {
+			t.Error("アンインストーラーがないのに見つけた")
+		}
+	})
+}
+
+func TestHolds(t *testing.T) {
+	inst := Installation{Dir: `C:\Users\u\AppData\Local\Programs\vMeltype`}
 	tests := []struct {
 		name string
 		exe  string
@@ -19,19 +33,9 @@ func TestMatch(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, ok := match(location, uninstaller, tt.exe)
-
-			if ok != tt.want {
-				t.Fatalf("ok = %v, want %v", ok, tt.want)
-			}
-			if ok && got.Uninstaller != `C:\Users\u\AppData\Local\Programs\vMeltype\unins000.exe` {
-				t.Errorf("Uninstaller = %q", got.Uninstaller)
+			if got := inst.Holds(tt.exe); got != tt.want {
+				t.Errorf("Holds = %v, want %v", got, tt.want)
 			}
 		})
 	}
-	t.Run("アンインストーラーの記録がなければ、インストーラーで入れたものとみなさない", func(t *testing.T) {
-		if _, ok := match(location, "", `C:\Users\u\AppData\Local\Programs\vMeltype\vmeltype.exe`); ok {
-			t.Error("アンインストーラーがないのに見つけた")
-		}
-	})
 }

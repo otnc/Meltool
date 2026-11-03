@@ -17,9 +17,9 @@ import (
 // uninstallKey は、インストーラーが「設定 → アプリ」に登録するキー。Inno Setup は AppId (vMeltype) に _is1 を付けた名前にする。
 const uninstallKey = `Software\Microsoft\Windows\CurrentVersion\Uninstall\vMeltype_is1`
 
-// Find は、exe (いま動いている vmeltype.exe) が、このユーザーにインストーラーで入れたものかを、「設定 → アプリ」の登録から調べる。
-// 登録があっても、exe がインストール先になければ (ZIP から別の場所に置いたものなら)、インストーラーで入れたものとみなさない。
-func Find(exe string) (Installation, bool, error) {
+// Find は、このユーザーにインストーラーで入れた vMeltype を、「設定 → アプリ」の登録から読む。登録がなければ false を返す。
+// いま動いている vmeltype.exe がそこにあるかは、Installation.Holds で調べる。
+func Find() (Installation, bool, error) {
 	key, err := registry.OpenKey(registry.CURRENT_USER, uninstallKey, registry.QUERY_VALUE)
 	if errors.Is(err, registry.ErrNotExist) {
 		return Installation{}, false, nil
@@ -36,20 +36,16 @@ func Find(exe string) (Installation, bool, error) {
 	if err != nil && !errors.Is(err, registry.ErrNotExist) {
 		return Installation{}, false, fmt.Errorf("vMeltype のアンインストーラーを読めませんでした: %w", err)
 	}
-	inst, ok := match(location, uninstaller, exe)
+	inst, ok := parse(location, uninstaller)
 	return inst, ok, nil
 }
 
-func match(location, uninstallString, exe string) (Installation, bool) {
+func parse(location, uninstallString string) (Installation, bool) {
 	uninstaller := strings.Trim(strings.TrimSpace(uninstallString), `"`)
 	if location == "" || uninstaller == "" {
 		return Installation{}, false
 	}
-	dir := filepath.Clean(location)
-	if !strings.EqualFold(filepath.Dir(filepath.Clean(exe)), dir) {
-		return Installation{}, false
-	}
-	return Installation{Dir: dir, Uninstaller: uninstaller}, true
+	return Installation{Dir: filepath.Clean(location), Uninstaller: uninstaller}, true
 }
 
 // RunSetup は、setup.exe を画面なしで動かし、終わるまで待つ。前と同じインストール先と選択で入れ直す。
