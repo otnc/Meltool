@@ -52,6 +52,8 @@ type Env struct {
 	InstalledTipHashes func() (map[string]string, error)
 	// ReplaceIME は、登録済みの Meltype IME の DLL を、appDir (切り替え先のバージョンの、本家の ZIP の app に当たるディレクトリ) のものに入れ替える。
 	ReplaceIME func(appDir string) (winime.Result, error)
+	// SetDisplayVersion は、本家が「設定 → アプリ」に登録した、インストール先が appDir の Meltype の項目のバージョンを書き換える。登録がなければ何もしない。
+	SetDisplayVersion func(appDir, version string) (bool, error)
 	// Executable は、いま動いている vmeltype の実行ファイルのパスを返す。app update が置き換える。
 	Executable func() (string, error)
 	// FindInstallation は、このユーザーにインストーラーで入れた vMeltype を返す。nil なら、インストーラーで入れたものはないとみなす。

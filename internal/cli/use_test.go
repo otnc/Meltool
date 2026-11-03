@@ -48,6 +48,9 @@ type localEnv struct {
 	// installed は、vmeltype.exe を vMeltype のインストーラーで入れたことを真似る。uninstallerStarts は、vMeltype のアンインストーラーを起動した回数。
 	installed         bool
 	uninstallerStarts int
+	// displayVersions は、本家の「設定 → アプリ」の登録のバージョンの書き換えを求められた記録。displayFails なら書き換えに失敗する。
+	displayVersions []displayVersionCall
+	displayFails    bool
 	// exe は、いま動いている vmeltype.exe の場所。空なら testExecutable。path は、環境変数 PATH。
 	exe, path string
 	// outColor と errColor は、標準出力と標準エラーが色を付けられる端末であることを真似る。
@@ -109,6 +112,13 @@ func (l *localEnv) run(t *testing.T, interactive bool, stdin string, args ...str
 		},
 		FindInstallation: func() (selfinstall.Installation, bool, error) {
 			return selfinstall.Installation{Dir: filepath.Dir(testExecutable), Uninstaller: filepath.Join(filepath.Dir(testExecutable), "unins000.exe")}, l.installed, nil
+		},
+		SetDisplayVersion: func(appDir, version string) (bool, error) {
+			l.displayVersions = append(l.displayVersions, displayVersionCall{appDir: appDir, version: version})
+			if l.displayFails {
+				return false, errors.New("登録を書き換えられませんでした")
+			}
+			return true, nil
 		},
 		StartUninstaller: func(selfinstall.Installation) error {
 			l.uninstallerStarts++

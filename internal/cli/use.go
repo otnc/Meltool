@@ -195,6 +195,7 @@ func switchVersion(cmd *cobra.Command, env *Env, root string, st store.Store, ta
 		return err
 	}
 	if standard {
+		updateDisplayVersion(env, plan.AppDir, target.Tag)
 		pruneAutoSnapshots(cmd, env, root)
 	}
 	if asJSON {
@@ -274,11 +275,14 @@ func runRecover(env *Env) func(*cobra.Command, []string) error {
 		if err := lifecycle.ExecuteRecover(root, plan); err != nil {
 			return err
 		}
+		tag := fromLabel(j.From)
+		if plan.Complete {
+			tag = j.To.Tag
+		}
+		if j.To.Variant == string(assets.Standard) && (plan.Complete || j.From != nil) {
+			updateDisplayVersion(env, j.To.AppDir, tag)
+		}
 		if imeRegistered {
-			tag := fromLabel(j.From)
-			if plan.Complete {
-				tag = j.To.Tag
-			}
 			if err := matchIME(env, j.To.AppDir, tag); err != nil {
 				return fmt.Errorf("実行先は復旧しましたが、%w", err)
 			}
@@ -508,5 +512,16 @@ func runCurrent(env *Env) func(*cobra.Command, []string) error {
 			fmt.Fprintf(out, "固定: %s (%s)\n", state.Pin.Tag, state.Pin.StoreID)
 		}
 		return nil
+	}
+}
+
+// updateDisplayVersion は、本家が「設定 → アプリ」に登録した Meltype の項目のバージョンを、実行先に置いたバージョンにする。
+// 本家の install.ps1 も自動更新でこの項目を書き換える。表示だけなので、書き換えられなくても切り替えは失敗にしない。
+func updateDisplayVersion(env *Env, appDir, tag string) {
+	if env.SetDisplayVersion == nil {
+		return
+	}
+	if _, err := env.SetDisplayVersion(appDir, strings.TrimPrefix(tag, "v")); err != nil {
+		env.warnf("「設定 → アプリ」に出る Meltype のバージョンを書き換えられませんでした: %v", err)
 	}
 }

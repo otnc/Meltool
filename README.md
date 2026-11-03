@@ -56,6 +56,7 @@ vmeltype app update         # vMeltype 自身を新しいバージョンにす�
 - 動いている Meltype を正常に終了させ、切り替えたあとに起動し直す
 - 切り替えの前に、データのスナップショットを作る。自動で作ったものは、新しいほうから 10 個 (`vmeltype app config set auto-snapshot-keep <数>` で変えられる) だけ残し、古いものを消す
 - 本家の自動更新を止める (`config.json` の `AutoUpdate` を `false` にする)
+- 本家が「設定 → アプリ」に登録していれば、そこに出るバージョンを切り替え先のものにする
 - Meltype IME を登録済みなら、IME の DLL も切り替え先のバージョンのものに入れ替える。DLL が違えば、管理者権限の確認 (UAC) が出る
 
 設定、保持バージョン、スナップショットは管理ルート (既定は `%LOCALAPPDATA%\vMeltype`) に置きます。
