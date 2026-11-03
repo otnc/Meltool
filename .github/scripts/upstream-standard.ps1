@@ -66,6 +66,13 @@ if (Test-Path $tipKey) {
     throw 'この環境には Meltype IME が既に登録されています。登録していない環境から始めます'
 }
 
+function Assert-DisplayVersion([string] $Tag) {
+    $displayed = (Get-ItemProperty -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Meltype').DisplayVersion
+    if ($displayed -ne $Tag.TrimStart('v')) {
+        throw "「設定 → アプリ」の Meltype のバージョンが $displayed で、$Tag ではありません"
+    }
+}
+
 function Get-StoredPackage([string] $Tag) {
     $stored = (Invoke-Vmeltype list --json | ConvertFrom-Json).stored | Where-Object { $_.tag.TrimStart('v') -eq $Tag.TrimStart('v') -and $_.variant -eq 'standard' }
     return Join-Path $root "versions\$($stored.id)\files"
@@ -112,6 +119,7 @@ Invoke-Vmeltype use $To -y | Out-Null
 Assert-Running $To
 Assert-ImeDll $To
 Assert-AutoUpdateDisabled
+Assert-DisplayVersion $To
 if (-not (Test-Path $marker)) {
     throw 'データ先に置いたファイルが消えました'
 }
@@ -140,6 +148,7 @@ Invoke-Vmeltype use $From -y | Out-Null
 Assert-Running $From
 Assert-ImeDll $From
 Assert-AutoUpdateDisabled
+Assert-DisplayVersion $From
 if (-not (Test-Path $marker)) {
     throw 'データ先に置いたファイルが消えました'
 }
