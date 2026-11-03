@@ -179,6 +179,7 @@ begin
   // usAppMutexCheck は、削除の確認のあとで、ファイルを消す前。ここで投げた例外はアンインストールを中止させる
   if CurUninstallStep = usAppMutexCheck then
     CleanUpManagementRoot();
-  if CurUninstallStep = usPostUninstall then
+  // 「設定 → アプリ」の登録より先に外し、登録が消えたときには PATH も片付いているようにする
+  if CurUninstallStep = usUninstall then
     RemoveFromPath(ExpandConstant('{app}'));
 end;
