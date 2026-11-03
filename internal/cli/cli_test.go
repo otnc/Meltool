@@ -68,7 +68,7 @@ func TestRunWithoutArguments(t *testing.T) {
 }
 
 func TestHelpHidesUnimplementedCommands(t *testing.T) {
-	for _, tt := range []struct{ parent, name string }{{"", "apply"}, {"", "track"}, {"app", "doctor"}} {
+	for _, tt := range []struct{ parent, name string }{{"", "apply"}, {"", "track"}} {
 		t.Run(strings.TrimSpace(tt.parent+" "+tt.name)+" は一覧に出さない", func(t *testing.T) {
 			help := execute(t, strings.Fields(tt.parent+" --help")...)
 			if strings.Contains(help.stdout, "\n  "+tt.name+" ") {
@@ -77,7 +77,7 @@ func TestHelpHidesUnimplementedCommands(t *testing.T) {
 		})
 	}
 	t.Run("一覧から隠したコマンドを打てば、まだないことを示す", func(t *testing.T) {
-		got := execute(t, "app", "doctor")
+		got := execute(t, "track", "status")
 
 		if got.code != ExitError || !strings.Contains(got.stderr, "まだ実装していません") {
 			t.Errorf("code = %d, stderr = %s", got.code, got.stderr)

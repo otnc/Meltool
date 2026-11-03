@@ -39,7 +39,9 @@ type check struct {
 	Name    string     `json:"name"`
 	Level   checkLevel `json:"level"`
 	Message string     `json:"message"`
-	Hint    string     `json:"hint,omitempty"`
+	// Detail は、--json でだけ示す詳しい情報 (権限の SDDL など)。
+	Detail string `json:"detail,omitempty"`
+	Hint   string `json:"hint,omitempty"`
 }
 
 func runDoctor(env *Env) func(*cobra.Command, []string) error {
