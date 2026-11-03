@@ -15,6 +15,7 @@ import (
 	"github.com/otnc/vmeltype/internal/assets"
 	"github.com/otnc/vmeltype/internal/prompt"
 	"github.com/otnc/vmeltype/internal/selfinstall"
+	"github.com/otnc/vmeltype/internal/selfupdate"
 	"github.com/otnc/vmeltype/internal/winime"
 )
 
@@ -106,6 +107,12 @@ func Run(args []string, env Env) int {
 
 // RunContext は Run と同じ。ctx が中止されたら (Ctrl+C など)、中止の終了コードを返す。
 func RunContext(ctx context.Context, args []string, env Env) int {
+	// app update で退避した前の vmeltype.exe は、その更新の間は動いていて消せないので、次に使ったときに消す
+	if env.Executable != nil {
+		if exe, err := env.Executable(); err == nil {
+			selfupdate.Cleanup(exe)
+		}
+	}
 	root := newRootCommand(&env)
 	root.SetArgs(args)
 	root.SetIn(env.In)
