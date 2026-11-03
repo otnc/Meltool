@@ -14,6 +14,7 @@ import (
 
 	"github.com/otnc/vmeltype/internal/assets"
 	"github.com/otnc/vmeltype/internal/prompt"
+	"github.com/otnc/vmeltype/internal/selfinstall"
 	"github.com/otnc/vmeltype/internal/winime"
 )
 
@@ -52,6 +53,12 @@ type Env struct {
 	ReplaceIME func(appDir string) (winime.Result, error)
 	// Executable は、いま動いている vmeltype の実行ファイルのパスを返す。app update が置き換える。
 	Executable func() (string, error)
+	// FindInstallation は、exe を vMeltype のインストーラーで入れたかを返す。nil なら、インストーラーで入れたものとみなさない。
+	FindInstallation func(exe string) (selfinstall.Installation, bool, error)
+	// RunSetup は、vMeltype のインストーラーを画面なしで動かし、終わるまで待つ。
+	RunSetup func(ctx context.Context, setup string) error
+	// StartUninstaller は、vMeltype のアンインストーラーを画面なしで起動し、終わるのを待たない。
+	StartUninstaller func(selfinstall.Installation) error
 	// RemoveMeltype は、通常版の Meltype を本家のアンインストーラーで削除する。fallbackScript は、インストール先にアンインストーラーがないときに使う uninstall.ps1。
 	RemoveMeltype func(appDir, fallbackScript string, interactive bool) error
 	// ListenKeys は、端末を 1 キーずつ読む。nil なら、確認は 1 行ずつ読む。入力が端末のときだけ渡す。
@@ -59,6 +66,14 @@ type Env struct {
 }
 
 // confirmer は、変更の前の確認を作る。確認は標準エラーに出し、端末なら y か n を押すだけで答えられる。
+// installation は、exe を vMeltype のインストーラーで入れたかを返す。
+func (env *Env) installation(exe string) (selfinstall.Installation, bool, error) {
+	if env.FindInstallation == nil || exe == "" {
+		return selfinstall.Installation{}, false, nil
+	}
+	return env.FindInstallation(exe)
+}
+
 func (env *Env) confirmer(cmd *cobra.Command, interactive, assumeYes bool) prompt.Confirmer {
 	return prompt.Confirmer{In: cmd.InOrStdin(), Out: cmd.ErrOrStderr(), Interactive: interactive, AssumeYes: assumeYes, ListenKeys: env.ListenKeys, Color: env.ErrColor}
 }
