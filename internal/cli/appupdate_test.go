@@ -278,3 +278,22 @@ func TestAppCheck(t *testing.T) {
 		}
 	})
 }
+
+func TestSelfUpdateCleanup(t *testing.T) {
+	t.Run("前の更新で退避した vmeltype.exe.old を、次のコマンドで消す", func(t *testing.T) {
+		e := newSelfUpdateEnv(t, "0.1.0", selfZip(t, "v0.1.0"))
+		os.WriteFile(e.exe+".old", []byte("vmeltype 0.0.9"), 0o700)
+
+		got := e.run(t, "--version")
+
+		if got.code != ExitOK {
+			t.Fatalf("code = %d\n%s", got.code, got.stderr)
+		}
+		if _, err := os.Stat(e.exe + ".old"); !os.IsNotExist(err) {
+			t.Errorf("vmeltype.exe.old が残っている")
+		}
+		if readFile(e.exe) != "vmeltype 0.1.0" {
+			t.Errorf("いまの vmeltype.exe を変えた: %q", readFile(e.exe))
+		}
+	})
+}
