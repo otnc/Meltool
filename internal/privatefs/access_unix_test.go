@@ -3,19 +3,26 @@
 package privatefs
 
 import (
-	"fmt"
 	"os"
 	"testing"
 )
 
 func othersCanAccess(t *testing.T, path string) string {
 	t.Helper()
-	info, err := os.Stat(path)
+	others, err := OthersCanAccess(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if perm := info.Mode().Perm(); perm&0o077 != 0 {
-		return fmt.Sprintf("権限 %o", perm)
+	return others
+}
+
+// mkdirShared は、ほかの利用者も読めるディレクトリを作る。
+func mkdirShared(t *testing.T, path string) {
+	t.Helper()
+	if err := os.Mkdir(path, 0o700); err != nil {
+		t.Fatal(err)
 	}
-	return ""
+	if err := os.Chmod(path, 0o755); err != nil {
+		t.Fatal(err)
+	}
 }
