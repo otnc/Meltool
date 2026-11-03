@@ -20,6 +20,7 @@ import (
 	"github.com/otnc/vmeltype/internal/osproc"
 	"github.com/otnc/vmeltype/internal/rootdir"
 	"github.com/otnc/vmeltype/internal/selfinstall"
+	"github.com/otnc/vmeltype/internal/upstreamreg"
 	"github.com/otnc/vmeltype/internal/upstreamremove"
 	"github.com/otnc/vmeltype/internal/winime"
 	"github.com/otnc/vmeltype/internal/winsys"
@@ -74,10 +75,11 @@ func main() {
 		ReplaceIME: func(appDir string) (winime.Result, error) {
 			return winime.Replace(ctx, appDir)
 		},
-		Executable:       os.Executable,
-		FindInstallation: selfinstall.Find,
-		RunSetup:         selfinstall.RunSetup,
-		StartUninstaller: selfinstall.StartUninstaller,
+		Executable:        os.Executable,
+		FindInstallation:  selfinstall.Find,
+		RunSetup:          selfinstall.RunSetup,
+		StartUninstaller:  selfinstall.StartUninstaller,
+		SetDisplayVersion: upstreamreg.SetDisplayVersion,
 		RemoveMeltype: func(appDir, fallbackScript string, interactive bool) error {
 			_, err := upstreamremove.Run(ctx, appDir, fallbackScript, interactive, removeMeltypeTimeout)
 			return err
