@@ -91,8 +91,8 @@ func (e *selfUpdateEnv) run(t *testing.T, args ...string) result {
 		GitHubAPIURL: e.server.URL,
 		Platform:     assets.Platform{OS: "windows", Arch: "amd64"},
 		Executable:   func() (string, error) { return e.exe, nil },
-		FindInstallation: func(exe string) (selfinstall.Installation, bool, error) {
-			return selfinstall.Installation{Dir: filepath.Dir(exe), Uninstaller: filepath.Join(filepath.Dir(exe), "unins000.exe")}, e.installed, nil
+		FindInstallation: func() (selfinstall.Installation, bool, error) {
+			return selfinstall.Installation{Dir: filepath.Dir(e.exe), Uninstaller: filepath.Join(filepath.Dir(e.exe), "unins000.exe")}, e.installed, nil
 		},
 		RunSetup: func(_ context.Context, setup string) error {
 			data, err := os.ReadFile(setup)

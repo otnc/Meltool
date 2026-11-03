@@ -54,8 +54,8 @@ type Env struct {
 	ReplaceIME func(appDir string) (winime.Result, error)
 	// Executable は、いま動いている vmeltype の実行ファイルのパスを返す。app update が置き換える。
 	Executable func() (string, error)
-	// FindInstallation は、exe を vMeltype のインストーラーで入れたかを返す。nil なら、インストーラーで入れたものとみなさない。
-	FindInstallation func(exe string) (selfinstall.Installation, bool, error)
+	// FindInstallation は、このユーザーにインストーラーで入れた vMeltype を返す。nil なら、インストーラーで入れたものはないとみなす。
+	FindInstallation func() (selfinstall.Installation, bool, error)
 	// RunSetup は、vMeltype のインストーラーを画面なしで動かし、終わるまで待つ。
 	RunSetup func(ctx context.Context, setup string) error
 	// StartUninstaller は、vMeltype のアンインストーラーを画面なしで起動し、終わるのを待たない。
@@ -72,7 +72,8 @@ func (env *Env) installation(exe string) (selfinstall.Installation, bool, error)
 	if env.FindInstallation == nil || exe == "" {
 		return selfinstall.Installation{}, false, nil
 	}
-	return env.FindInstallation(exe)
+	inst, ok, err := env.FindInstallation()
+	return inst, ok && inst.Holds(exe), err
 }
 
 func (env *Env) confirmer(cmd *cobra.Command, interactive, assumeYes bool) prompt.Confirmer {

@@ -52,3 +52,26 @@ func TestMkdirAllKeepsExistingDirectories(t *testing.T) {
 		t.Errorf("既存のディレクトリの中身が消えた: %v", err)
 	}
 }
+
+func TestOthersCanAccess(t *testing.T) {
+	t.Run("MkdirAll で作ったディレクトリは、本人のほかは使えない", func(t *testing.T) {
+		dir := filepath.Join(t.TempDir(), "root")
+		MkdirAll(dir)
+
+		others, err := OthersCanAccess(dir)
+
+		if err != nil || others != "" {
+			t.Errorf("others = %q, err = %v", others, err)
+		}
+	})
+	t.Run("ほかの利用者も読めるディレクトリを見つける", func(t *testing.T) {
+		dir := filepath.Join(t.TempDir(), "shared")
+		mkdirShared(t, dir)
+
+		others, err := OthersCanAccess(dir)
+
+		if err != nil || others == "" {
+			t.Errorf("others = %q, err = %v", others, err)
+		}
+	})
+}

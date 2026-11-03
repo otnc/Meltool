@@ -21,6 +21,9 @@ import (
 	"github.com/otnc/vmeltype/internal/winime"
 )
 
+// testExecutable は、テストで動いている vmeltype.exe の場所。
+const testExecutable = `C:\tools\vmeltype.exe`
+
 type localEnv struct {
 	root    string
 	running []string
@@ -45,6 +48,8 @@ type localEnv struct {
 	// installed は、vmeltype.exe を vMeltype のインストーラーで入れたことを真似る。uninstallerStarts は、vMeltype のアンインストーラーを起動した回数。
 	installed         bool
 	uninstallerStarts int
+	// exe は、いま動いている vmeltype.exe の場所。空なら testExecutable。path は、環境変数 PATH。
+	exe, path string
 	// outColor と errColor は、標準出力と標準エラーが色を付けられる端末であることを真似る。
 	outColor, errColor bool
 }
@@ -57,15 +62,20 @@ func (l *localEnv) run(t *testing.T, interactive bool, stdin string, args ...str
 	t.Helper()
 	var stdout, stderr bytes.Buffer
 	env := Env{
-		In:           strings.NewReader(stdin),
-		Out:          &stdout,
-		Err:          &stderr,
-		Interactive:  interactive,
-		OutColor:     l.outColor,
-		ErrColor:     l.errColor,
-		Version:      "1.2.3",
-		Now:          func() time.Time { return time.Date(2026, 10, 29, 9, 0, 0, 0, time.UTC) },
-		Getenv:       func(string) string { return "" },
+		In:          strings.NewReader(stdin),
+		Out:         &stdout,
+		Err:         &stderr,
+		Interactive: interactive,
+		OutColor:    l.outColor,
+		ErrColor:    l.errColor,
+		Version:     "1.2.3",
+		Now:         func() time.Time { return time.Date(2026, 10, 29, 9, 0, 0, 0, time.UTC) },
+		Getenv: func(name string) string {
+			if name == "PATH" {
+				return l.path
+			}
+			return ""
+		},
 		DefaultRoot:  func() (string, error) { return l.root, nil },
 		Platform:     assets.Platform{OS: "windows", Arch: "amd64"},
 		RunningUnder: func(string) ([]string, error) { return l.running, nil },
@@ -84,7 +94,12 @@ func (l *localEnv) run(t *testing.T, interactive bool, stdin string, args ...str
 		LocalAppData:       func() (string, error) { return l.localAppData, nil },
 		IMERegistered:      func() (bool, error) { return l.imeRegistered, nil },
 		InstalledTipHashes: func() (map[string]string, error) { return l.installedTip, nil },
-		Executable:         func() (string, error) { return `C:	oolsvmeltype.exe`, nil },
+		Executable: func() (string, error) {
+			if l.exe != "" {
+				return l.exe, nil
+			}
+			return testExecutable, nil
+		},
 		RemoveMeltype: func(appDir, fallback string, interactive bool) error {
 			l.removeCalls = append(l.removeCalls, removeCall{appDir: appDir, fallback: fallback, interactive: interactive})
 			if l.removeFails {
@@ -92,8 +107,8 @@ func (l *localEnv) run(t *testing.T, interactive bool, stdin string, args ...str
 			}
 			return os.RemoveAll(appDir)
 		},
-		FindInstallation: func(exe string) (selfinstall.Installation, bool, error) {
-			return selfinstall.Installation{Dir: filepath.Dir(exe), Uninstaller: filepath.Join(filepath.Dir(exe), "unins000.exe")}, l.installed, nil
+		FindInstallation: func() (selfinstall.Installation, bool, error) {
+			return selfinstall.Installation{Dir: filepath.Dir(testExecutable), Uninstaller: filepath.Join(filepath.Dir(testExecutable), "unins000.exe")}, l.installed, nil
 		},
 		StartUninstaller: func(selfinstall.Installation) error {
 			l.uninstallerStarts++

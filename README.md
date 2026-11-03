@@ -42,6 +42,7 @@ vmeltype snapshot export <id> data.vmeltype-snapshot  # 保存したデータを
 vmeltype snapshot prune     # 自動で作ったスナップショットの古いものを消す
 vmeltype status             # 有効なバージョン、配置、データ先を表示する
 vmeltype doctor             # 問題がないかを調べ、直し方を示す
+vmeltype app doctor         # vMeltype 自身、PATH、管理ルートの権限に問題がないかを調べる
 vmeltype app check          # vMeltype 自身の新しいバージョンがあるかを確かめる
 vmeltype app update         # vMeltype 自身を新しいバージョンにする (self upgrade でも同じ)
 ```
