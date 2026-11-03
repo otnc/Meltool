@@ -125,3 +125,19 @@ func summarize(names []string) string {
 	}
 	return fmt.Sprintf("%s ほか %d 件", strings.Join(names[:shown], "、"), len(names)-shown)
 }
+
+// writeLocalStatus は、引数なしの vmeltype で、ヘルプの前に status と同じ内容を表示する。
+func writeLocalStatus(cmd *cobra.Command, env *Env) error {
+	root, err := managementRoot(cmd, env)
+	if err != nil {
+		return err
+	}
+	s, err := inspectLocal(env, root)
+	if err != nil {
+		return err
+	}
+	out := cmd.OutOrStdout()
+	writeStatus(out, s)
+	fmt.Fprintln(out)
+	return nil
+}
