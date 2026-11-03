@@ -160,3 +160,36 @@ func TestRestoreAutoUpdate(t *testing.T) {
 		}
 	})
 }
+
+func TestAutoUpdateDisabled(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want bool
+	}{
+		{name: "false なら止まっている", body: "\xEF\xBB\xBF{\"AutoUpdate\": false}", want: true},
+		{name: "true なら動いている", body: `{"AutoUpdate": true}`, want: false},
+		{name: "項目がなければ、本家の既定の true で動いている", body: `{"Enabled": true}`, want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := AutoUpdateDisabled(writeConfig(t, tt.body))
+
+			if err != nil || got != tt.want {
+				t.Errorf("AutoUpdateDisabled = %v, %v; want %v", got, err, tt.want)
+			}
+		})
+	}
+	t.Run("ファイルがなければ、本家が既定の設定を作るので動いているとみなす", func(t *testing.T) {
+		got, err := AutoUpdateDisabled(filepath.Join(t.TempDir(), "config.json"))
+
+		if err != nil || got {
+			t.Errorf("AutoUpdateDisabled = %v, %v", got, err)
+		}
+	})
+	t.Run("読めない設定はエラーにする", func(t *testing.T) {
+		if _, err := AutoUpdateDisabled(writeConfig(t, "{壊れている")); err == nil {
+			t.Error("エラーにしていない")
+		}
+	})
+}
