@@ -65,7 +65,7 @@ func runUse(env *Env) func(*cobra.Command, []string) error {
 		if err != nil {
 			return err
 		}
-		return switchVersion(cmd, env, root, st, target, force || reinstall, "%s に切り替えますか？")
+		return switchVersion(cmd, env, root, st, target, force || reinstall, "%s に切り替えますか？", "%s に切り替えました")
 	}
 }
 
@@ -88,13 +88,14 @@ func runRollback(env *Env) func(*cobra.Command, []string) error {
 			return fmt.Errorf("直前のバージョン %s は保持していないので、戻せません: %w", state.Previous.StoreID, err)
 		}
 		fmt.Fprintln(cmd.ErrOrStderr(), "rollback はバージョンだけを戻し、data は戻しません。")
-		return switchVersion(cmd, env, root, st, target, false, "%s に戻しますか？")
+		return switchVersion(cmd, env, root, st, target, false, "%s に戻しますか？", "%s に切り替えました")
 	}
 }
 
 // switchVersion は、use と rollback に共通の切り替え。計画を示して確認してから、実行先を入れ替える。
 // question は、確認の文言で、%s に切り替え先のタグが入る。
-func switchVersion(cmd *cobra.Command, env *Env, root string, st store.Store, target store.Stored, force bool, question string) error {
+// switchVersion は、target を有効にする。question と done は、確認と終わったときの文言で、%s に target のタグが入る。
+func switchVersion(cmd *cobra.Command, env *Env, root string, st store.Store, target store.Stored, force bool, question, done string) error {
 	flags := cmd.Flags()
 	dryRun, _ := flags.GetBool("dry-run")
 	yes, _ := flags.GetBool("yes")
@@ -202,10 +203,10 @@ func switchVersion(cmd *cobra.Command, env *Env, root string, st store.Store, ta
 		return writeJSON(out, map[string]any{"changed": true, "active": target.ID, "appDir": plan.AppDir})
 	}
 	if stopped {
-		fmt.Fprintf(out, "%s に切り替えました。\n", target.Tag)
+		fmt.Fprintf(out, done+"。\n", target.Tag)
 		return nil
 	}
-	fmt.Fprintf(out, "%s に切り替えました。起動するには %s を実行します。\n", target.Tag, filepath.Join(plan.AppDir, "Meltype.exe"))
+	fmt.Fprintf(out, done+"。起動するには %s を実行します。\n", target.Tag, filepath.Join(plan.AppDir, "Meltype.exe"))
 	return nil
 }
 

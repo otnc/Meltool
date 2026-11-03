@@ -162,6 +162,6 @@ func runUpdate(env *Env) func(*cobra.Command, []string) error {
 				return err
 			}
 		}
-		return switchVersion(cmd, env, root, st, target, false, "%s に切り替えますか？")
+		return switchVersion(cmd, env, root, st, target, false, "%s に切り替えますか？", "%s に切り替えました")
 	}
 }

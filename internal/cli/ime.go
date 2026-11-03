@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	// errIMECanceled は、IME の DLL の入れ替えで、管理者権限の確認 (UAC) を断られたことを表す。
-	errIMECanceled = errors.New("Meltype IME の DLL の入れ替えに要る管理者権限の確認が断られました")
+	// errIMECanceled は、IME の DLL の入れ替えか登録で、管理者権限の確認 (UAC) を断られたことを表す。
+	errIMECanceled = errors.New("Meltype IME の DLL の登録に要る管理者権限の確認 (UAC) が断られました")
 	// errIMEFailed は、IME の DLL を登録できなかったことを表す。本家の登録の処理は、失敗すると前の DLL に戻す。
 	errIMEFailed = errors.New("Meltype IME の DLL を登録できませんでした。ほかのアプリが DLL を使っていないかを確かめてください")
 )
@@ -44,9 +44,15 @@ func replaceIME(env *Env, storedAppDir, tag string) error {
 	if err != nil {
 		return err
 	}
-	switch result {
-	case winime.ResultCurrent, winime.ResultReplaced:
+	if result == winime.ResultCurrent || result == winime.ResultReplaced {
 		return nil
+	}
+	return imeResultError(result, tag)
+}
+
+// imeResultError は、IME の DLL を登録できなかった結果を、利用者に示すエラーにする。
+func imeResultError(result winime.Result, tag string) error {
+	switch result {
 	case winime.ResultCanceled:
 		return errIMECanceled
 	case winime.ResultFailed:

@@ -37,7 +37,10 @@ type localEnv struct {
 	imeRegistered bool
 	// imeResult は、IME の DLL の入れ替えの結果。imeCalls は、入れ替えを求められた記録。
 	imeResult winime.Result
-	imeCalls  []imeCall
+	// registerResult は、Meltype IME の登録の結果。registerCalls は、登録を求められた記録 (渡された app のディレクトリ)。
+	registerResult winime.Result
+	registerCalls  []string
+	imeCalls       []imeCall
 	// installedTip は、Program Files に登録されている IME の DLL のハッシュ。
 	installedTip map[string]string
 	// upstream は、公式一覧と配布物を返す偽の GitHub。nil なら通信しない。
@@ -123,6 +126,10 @@ func (l *localEnv) run(t *testing.T, interactive bool, stdin string, args ...str
 		StartUninstaller: func(selfinstall.Installation) error {
 			l.uninstallerStarts++
 			return nil
+		},
+		RegisterIME: func(appDir string) (winime.Result, error) {
+			l.registerCalls = append(l.registerCalls, appDir)
+			return l.registerResult, nil
 		},
 		ReplaceIME: func(appDir string) (winime.Result, error) {
 			l.imeCalls = append(l.imeCalls, imeCall{appDir: appDir, deployed: readFile(filepath.Join(l.standardAppDir(), "Meltype.exe"))})
