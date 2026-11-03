@@ -143,6 +143,34 @@ if ($status.deployment -ne 'match' -or $status.running.Count -eq 0 -or $status.d
 }
 Invoke-Vmeltype doctor | Out-Null
 
+Write-Host '--- 一致していれば、apply は何も直さない'
+$apply = Invoke-Vmeltype apply -y --json | ConvertFrom-Json
+if (@($apply.reasons).Count -ne 0) {
+    throw "一致しているのに apply が直そうとしました: $($apply.reasons -join '、')"
+}
+
+if (-not $Ime) {
+    Write-Host '--- apply --ime で Meltype IME を登録する。既定の入力方式は変えない'
+    $overrideBefore = (Get-WinDefaultInputMethodOverride | Out-String).Trim()
+    $apply = Invoke-Vmeltype apply --ime -y --json | ConvertFrom-Json
+    if ($apply.ime -ne 'registered') {
+        throw "apply --ime で登録できませんでした: $($apply.ime)"
+    }
+    if (-not (Test-Path $tipKey)) {
+        throw 'apply --ime のあとに、Meltype IME が登録されていません'
+    }
+    $japanese = Get-WinUserLanguageList | Where-Object { $_.LanguageTag -like 'ja*' } | Select-Object -First 1
+    if (-not $japanese -or -not ($japanese.InputMethodTips -match '417D801B-A9BD-4C26-BD16-356A825A6998')) {
+        throw '日本語のキーボードの一覧に Meltype を足していません'
+    }
+    if ((Get-WinDefaultInputMethodOverride | Out-String).Trim() -ne $overrideBefore) {
+        throw '既定の入力方式を変えました'
+    }
+    # ここからは、IME を登録した環境として、切り替えで DLL も入れ替わることを確かめる
+    $Ime = $true
+    Assert-ImeDll $To
+}
+
 Write-Host '--- 元のバージョンに切り替える'
 Invoke-Vmeltype use $From -y | Out-Null
 Assert-Running $From
