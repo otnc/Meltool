@@ -79,11 +79,13 @@ func main() {
 		RegisterIME: func(appDir string) (winime.Result, error) {
 			return winime.Register(ctx, appDir)
 		},
-		Executable:        os.Executable,
-		FindInstallation:  selfinstall.Find,
-		RunSetup:          selfinstall.RunSetup,
-		StartUninstaller:  selfinstall.StartUninstaller,
-		SetDisplayVersion: upstreamreg.SetDisplayVersion,
+		Executable:         os.Executable,
+		FindInstallation:   selfinstall.Find,
+		RunSetup:           selfinstall.RunSetup,
+		StartUninstaller:   selfinstall.StartUninstaller,
+		SetDisplayVersion:  upstreamreg.SetDisplayVersion,
+		AddToUserPath:      selfinstall.AddToUserPath,
+		RemoveFromUserPath: selfinstall.RemoveFromUserPath,
 		RemoveMeltype: func(appDir, fallbackScript string, interactive bool) error {
 			_, err := upstreamremove.Run(ctx, appDir, fallbackScript, interactive, removeMeltypeTimeout)
 			return err

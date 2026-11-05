@@ -67,6 +67,7 @@ func runAppUninstall(env *Env) func(*cobra.Command, []string) error {
 			if err := startSelfUninstaller(env, self); err != nil {
 				return err
 			}
+			removeSelfFromPath(env, exe, fromInstaller)
 			writeSelfRemovalNote(out, self)
 			return nil
 		}
@@ -191,6 +192,7 @@ func runAppUninstall(env *Env) func(*cobra.Command, []string) error {
 		if err := startSelfUninstaller(env, self); err != nil {
 			return fmt.Errorf("管理ルートは消しました。%w", err)
 		}
+		removeSelfFromPath(env, exe, fromInstaller)
 		if asJSON {
 			return writeJSON(out, map[string]any{"root": root, "removedMeltype": removeMeltype, "keptSnapshots": keepSnapshots, "executable": exe, "uninstallerStarted": self.uninstaller != nil})
 		}
@@ -217,6 +219,18 @@ func startSelfUninstaller(env *Env, self selfRemoval) error {
 		return fmt.Errorf("%w。「設定 → アプリ」から vMeltype を削除してください", err)
 	}
 	return nil
+}
+
+// removeSelfFromPath は、アンインストーラーから呼ばれたときに、vmeltype.exe のフォルダーを利用者の PATH から外す。
+// 管理ルートは片付け終わっているので、外せなくても失敗にはせず、警告する。
+func removeSelfFromPath(env *Env, exe string, fromInstaller bool) {
+	if !fromInstaller || exe == "" || env.RemoveFromUserPath == nil {
+		return
+	}
+	dir := filepath.Dir(exe)
+	if err := env.RemoveFromUserPath(dir); err != nil {
+		env.warnf("PATH から %s を外せませんでした。手で外してください: %v", dir, err)
+	}
 }
 
 func writeSelfRemovalNote(out io.Writer, self selfRemoval) {

@@ -64,6 +64,8 @@ type Env struct {
 	RunSetup func(ctx context.Context, setup string) error
 	// StartUninstaller は、vMeltype のアンインストーラーを画面なしで起動し、終わるのを待たない。
 	StartUninstaller func(selfinstall.Installation) error
+	// AddToUserPath と RemoveFromUserPath は、利用者の PATH にフォルダーを足す、外す。vMeltype のインストーラーとアンインストーラーから呼ばれたときだけ使う。
+	AddToUserPath, RemoveFromUserPath func(dir string) error
 	// RemoveMeltype は、通常版の Meltype を本家のアンインストーラーで削除する。fallbackScript は、インストール先にアンインストーラーがないときに使う uninstall.ps1。
 	RemoveMeltype func(appDir, fallbackScript string, interactive bool) error
 	// ListenKeys は、端末を 1 キーずつ読む。nil なら、確認は 1 行ずつ読む。入力が端末のときだけ渡す。
