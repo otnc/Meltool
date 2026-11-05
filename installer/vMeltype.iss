@@ -3,6 +3,10 @@
 ; → dist\vMeltype-0.1.0-setup.exe
 ;
 ; アンインストールでは、ファイルを消す前に vmeltype app uninstall で管理ルートを片付ける。失敗したら何も消さずに中止する。
+;
+; 処理はできるだけ vmeltype.exe (Go) に置き、ここには設定と、vmeltype を呼ぶところだけを書く。
+; 入れるファイルは SourceDir の中身をまとめて入れるので、配布物にファイルを足してもここは変えなくてよい。
+; PATH に足すのは app add-to-path、外すのは app uninstall --from-installer が行う。
 
 #ifndef AppVersion
   #define AppVersion "0.0.0"
@@ -52,83 +56,16 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "addtopath"; Description: "vmeltype を PATH に追加する (どのフォルダーからでも vmeltype で使えるようにする)"
 
 [Files]
-Source: "{#SourceDir}\vmeltype.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#SourceDir}\LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+[Run]
+Filename: "{app}\vmeltype.exe"; Parameters: "app add-to-path"; Tasks: addtopath; Flags: runhidden waituntilterminated
 
 [UninstallDelete]
 ; app update が退避した前のバージョン
 Type: files; Name: "{app}\vmeltype.exe.old"
 
 [Code]
-const
-  EnvironmentKey = 'Environment';
-
-function SameDir(A, B: String): Boolean;
-begin
-  Result := CompareText(RemoveBackslashUnlessRoot(Trim(A)), RemoveBackslashUnlessRoot(Trim(B))) = 0;
-end;
-
-// PathWithout は、; で区切った Paths から Dir を除いたものを返す。ほかの項目 (空の項目も) は、順も書き方も変えない。
-function PathWithout(Paths, Dir: String): String;
-var
-  Rest, Entry: String;
-  P: Integer;
-  First: Boolean;
-begin
-  Result := '';
-  First := True;
-  Rest := Paths;
-  while True do
-  begin
-    P := Pos(';', Rest);
-    if P = 0 then
-      Entry := Rest
-    else
-      Entry := Copy(Rest, 1, P - 1);
-    if (Entry = '') or not SameDir(Entry, Dir) then
-    begin
-      if not First then
-        Result := Result + ';';
-      Result := Result + Entry;
-      First := False;
-    end;
-    if P = 0 then
-      Break;
-    Rest := Copy(Rest, P + 1, Length(Rest));
-  end;
-end;
-
-// 利用者の PATH は %USERPROFILE% などを含むことがあるので、展開せずに読み、REG_EXPAND_SZ で書き戻す
-procedure AddToPath(Dir: String);
-var
-  Paths: String;
-begin
-  if not RegQueryStringValue(HKCU, EnvironmentKey, 'Path', Paths) then
-    Paths := '';
-  if PathWithout(Paths, Dir) <> Paths then
-    Exit;
-  if (Paths <> '') and (Paths[Length(Paths)] <> ';') then
-    Paths := Paths + ';';
-  RegWriteExpandStringValue(HKCU, EnvironmentKey, 'Path', Paths + Dir);
-end;
-
-procedure RemoveFromPath(Dir: String);
-var
-  Paths, Kept: String;
-begin
-  if not RegQueryStringValue(HKCU, EnvironmentKey, 'Path', Paths) then
-    Exit;
-  Kept := PathWithout(Paths, Dir);
-  if Kept <> Paths then
-    RegWriteExpandStringValue(HKCU, EnvironmentKey, 'Path', Kept);
-end;
-
-procedure CurStepChanged(CurStep: TSetupStep);
-begin
-  if (CurStep = ssPostInstall) and WizardIsTaskSelected('addtopath') then
-    AddToPath(ExpandConstant('{app}'));
-end;
-
 function JoinLines(Lines: TArrayOfString): String;
 var
   I: Integer;
@@ -142,7 +79,7 @@ begin
   end;
 end;
 
-// CleanUpManagementRoot は、vmeltype app uninstall で管理ルートを片付ける。失敗したら例外を投げ、アンインストールを中止させる。
+// CleanUpManagementRoot は、vmeltype app uninstall で管理ルートと PATH を片付ける。失敗したら例外を投げ、アンインストールを中止させる。
 // 画面なしのアンインストール (vmeltype app uninstall から起動したときを含む) では聞かず、Meltype とスナップショットを残す。
 procedure CleanUpManagementRoot();
 var
@@ -179,7 +116,4 @@ begin
   // usAppMutexCheck は、削除の確認のあとで、ファイルを消す前。ここで投げた例外はアンインストールを中止させる
   if CurUninstallStep = usAppMutexCheck then
     CleanUpManagementRoot();
-  // 「設定 → アプリ」の登録より先に外し、登録が消えたときには PATH も片付いているようにする
-  if CurUninstallStep = usUninstall then
-    RemoveFromPath(ExpandConstant('{app}'));
 end;

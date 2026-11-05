@@ -10,6 +10,7 @@ on:
       - installer/**
       - internal/selfinstall/**
       - internal/cli/appuninstall.go
+      - internal/cli/installerhooks.go
   workflow_dispatch:
 
 permissions:
