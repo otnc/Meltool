@@ -58,6 +58,8 @@ type localEnv struct {
 	exe, path string
 	// outColor と errColor は、標準出力と標準エラーが色を付けられる端末であることを真似る。
 	outColor, errColor bool
+	// chooser は、選択画面の代わり。nil なら選択画面を出せない環境を真似る。
+	chooser *fakeChooser
 }
 
 func newLocalEnv(t *testing.T) *localEnv {
@@ -135,6 +137,9 @@ func (l *localEnv) run(t *testing.T, interactive bool, stdin string, args ...str
 			l.imeCalls = append(l.imeCalls, imeCall{appDir: appDir, deployed: readFile(filepath.Join(l.standardAppDir(), "Meltype.exe"))})
 			return l.imeResult, nil
 		},
+	}
+	if l.chooser != nil {
+		env.Choose = l.chooser.choose
 	}
 	if l.upstream != nil {
 		env.HTTPClient = l.upstream.server.Client()

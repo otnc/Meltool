@@ -68,6 +68,17 @@ type Env struct {
 	RemoveMeltype func(appDir, fallbackScript string, interactive bool) error
 	// ListenKeys は、端末を 1 キーずつ読む。nil なら、確認は 1 行ずつ読む。入力が端末のときだけ渡す。
 	ListenKeys prompt.ListenKeys
+	// Choose は、バージョンを省いた install と use で、候補を選ばせる。nil なら選択画面を出さない。端末のときだけ渡す。
+	Choose prompt.Choose
+}
+
+// chooser は、候補を選ばせてよいときだけ、選択画面を返す。
+// 端末で対話できて、--json でないときに限る。-y は選択を代わりに行わない。
+func (env *Env) chooser(cmd *cobra.Command) prompt.Choose {
+	if asJSON, _ := cmd.Flags().GetBool("json"); asJSON || !env.Interactive {
+		return nil
+	}
+	return env.Choose
 }
 
 // confirmer は、変更の前の確認を作る。確認は標準エラーに出し、端末なら y か n を押すだけで答えられる。
