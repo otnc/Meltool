@@ -22,7 +22,9 @@ Write-Host '--- track enable で、タスク スケジューラーに登録す�
 Invoke-Vmeltype track enable --interval 24h
 $xml = schtasks.exe /Query /TN $task /XML | Out-String
 if ($LASTEXITCODE -ne 0) { throw 'タスクが登録されていません' }
-foreach ($want in @('<Interval>PT24H</Interval>', '<Command>conhost.exe</Command>', '--headless', 'track run --root')) {
+# タスク スケジューラーは間隔を P1D のように書き直して保存するので、どちらの書き方も受け付ける
+if ($xml -notmatch '<Interval>(PT24H|P1D)</Interval>') { throw "タスクの定義の間隔が 24 時間ではありません:`n$xml" }
+foreach ($want in @('<Command>conhost.exe</Command>', '--headless', 'track run --root')) {
     if (-not $xml.Contains($want)) { throw "タスクの定義に $want がありません:`n$xml" }
 }
 
