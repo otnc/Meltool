@@ -26,6 +26,8 @@ type fakeRelease struct {
 	zip        []byte
 	// digest は、API が返す期待値。空なら期待値のない配布物になる
 	digest string
+	// noAssets は、配布物を添付していないリリースを真似る。
+	noAssets bool
 }
 
 type fakeUpstream struct {
@@ -34,6 +36,8 @@ type fakeUpstream struct {
 	apiCalls  atomic.Int32
 	downloads atomic.Int32
 	authSeen  atomic.Bool
+	// chooser は、選択画面の代わり。nil なら選択画面を出せない環境を真似る。
+	chooser *fakeChooser
 }
 
 func makeZip(t *testing.T, files map[string]string) []byte {
@@ -70,8 +74,11 @@ func newFakeUpstream(t *testing.T, releases ...fakeRelease) *fakeUpstream {
 			f.apiCalls.Add(1)
 			var body []map[string]any
 			for i, rel := range f.releases {
-				var assetList []map[string]any
+				assetList := []map[string]any{}
 				for j, platform := range []string{"windows", "windows-portable"} {
+					if rel.noAssets {
+						break
+					}
 					name := fmt.Sprintf("Meltype-%s-%s.zip", strings.TrimPrefix(rel.tag, "v"), platform)
 					assetList = append(assetList, map[string]any{
 						"id": 100 + i*10 + j, "name": name, "size": len(rel.zip), "digest": rel.digest,
@@ -117,6 +124,9 @@ func (f *fakeUpstream) run(t *testing.T, root string, interactive bool, stdin st
 		HTTPClient:   f.server.Client(),
 		GitHubAPIURL: f.server.URL,
 		Platform:     assets.Platform{OS: "windows", Arch: "amd64"},
+	}
+	if f.chooser != nil {
+		env.Choose = f.chooser.choose
 	}
 	code := Run(args, env)
 	return result{code: code, stdout: stdout.String(), stderr: stderr.String()}

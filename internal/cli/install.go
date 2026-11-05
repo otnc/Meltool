@@ -23,7 +23,7 @@ import (
 
 const installLong = `公式の配布物を取得し、GitHub が示す SHA-256 と照合してから展開し、保持バージョンとして置きます。有効なバージョンは変えません。
 
-バージョンの先頭の v は省けます。バージョンを省くと正式版の最新、1 や 1.4 のような範囲ではその中の正式版の最新、1.4.0 ではその正式版を選びます。--pre を付けると、正式版ではなくプレリリースから最新を選びます (例: 1.4.1 --pre)。1.4.1-pre.1 のようにプレリリースを直接指定することもできます。最新は SemVer で比べ、GitHub の Latest の表示とは異なることがあります。
+バージョンの先頭の v は省けます。端末でバージョンを省くと、公式一覧の候補を選ぶ画面を出します (/ で絞り込み、Esc で中止)。端末でないときと --json のとき、latest と書いたときは正式版の最新、1 や 1.4 のような範囲ではその中の正式版の最新、1.4.0 ではその正式版を選びます。--pre を付けると、正式版ではなくプレリリースから最新を選びます (例: 1.4.1 --pre)。1.4.1-pre.1 のようにプレリリースを直接指定することもできます。最新は SemVer で比べ、GitHub の Latest の表示とは異なることがあります。
 portable 版を取得するには --portable を付けます。付けなければ通常版を取得します。
 既に保持しているバージョンは、通信せずに終わります。取得し直すには --reinstall を付けます。`
 
@@ -97,7 +97,12 @@ func runInstall(env *Env) func(*cobra.Command, []string) error {
 		if err != nil {
 			return err
 		}
-		release, err := resolveRelease(c.Releases(), query)
+		var release catalog.Release
+		if choose := env.chooser(cmd); choose != nil && input == "" && !pre {
+			release, err = chooseRelease(choose, c.Releases(), st, root, env.Platform, variant)
+		} else {
+			release, err = resolveRelease(c.Releases(), query)
+		}
 		if err != nil {
 			return err
 		}

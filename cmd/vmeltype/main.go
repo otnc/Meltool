@@ -15,6 +15,7 @@ import (
 	"github.com/otnc/vmeltype/internal/appctl"
 	"github.com/otnc/vmeltype/internal/assets"
 	"github.com/otnc/vmeltype/internal/catalog/remote"
+	"github.com/otnc/vmeltype/internal/choose"
 	"github.com/otnc/vmeltype/internal/cli"
 	"github.com/otnc/vmeltype/internal/keyinput"
 	"github.com/otnc/vmeltype/internal/osproc"
@@ -91,6 +92,7 @@ func main() {
 	// keyinput は、入力が端末でないと戻らないので、対話できるときだけ使う
 	if env.Interactive {
 		env.ListenKeys = keyinput.Listen
+		env.Choose = choose.New(os.Stdin, os.Stderr)
 	}
 	code := cli.RunContext(ctx, os.Args[1:], env)
 	stop()

@@ -18,7 +18,7 @@ import (
 
 const useLong = `保持バージョンを有効にします。通信しません。保持していないバージョンは、先に "vmeltype install <tag>" で取得します。
 
-バージョンの指定は install と同じで、保持しているバージョンの中から選びます。バージョンを省くと保持している正式版の最新、1 や 1.4 ではその範囲の最新、--pre ではプレリリースの最新です。
+バージョンの指定は install と同じで、保持しているバージョンの中から選びます。端末でバージョンを省くと、保持バージョンの候補を選ぶ画面を出します。端末でないときと --json のとき、latest と書いたときは保持している正式版の最新、1 や 1.4 ではその範囲の最新、--pre ではプレリリースの最新です。
 
 portable 版は --portable を付けたときだけ対象にします。付けなければ通常版 (IME の登録を伴うもの) だけを探し、portable 版しか保持していなくても選びません。
 いまは Windows だけに対応しています。どちらも実行先を固定し、バージョンを切り替えるときはアプリのファイルだけを入れ替えます。vMeltype が置いていないファイルはそのまま引き継ぎます。
@@ -61,7 +61,12 @@ func runUse(env *Env) func(*cobra.Command, []string) error {
 			return err
 		}
 		st := store.Store{Root: root}
-		target, err := resolveStored(st, query, env.Platform)
+		var target store.Stored
+		if choose := env.chooser(cmd); choose != nil && query.input == "" && !query.pre && query.id == "" {
+			target, err = chooseStored(choose, st, root, query, env.Platform)
+		} else {
+			target, err = resolveStored(st, query, env.Platform)
+		}
 		if err != nil {
 			return err
 		}
