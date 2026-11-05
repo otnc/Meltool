@@ -21,3 +21,13 @@ func RunSetup(context.Context, string) error {
 func StartUninstaller(Installation) error {
 	return errors.New("インストーラーは Windows にだけあります")
 }
+
+// AddToUserPath は、Windows 以外では使わない。
+func AddToUserPath(string) error {
+	return errors.New("インストーラーは Windows にだけあります")
+}
+
+// RemoveFromUserPath は、Windows 以外では使わない。
+func RemoveFromUserPath(string) error {
+	return errors.New("インストーラーは Windows にだけあります")
+}

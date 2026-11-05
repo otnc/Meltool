@@ -31,6 +31,9 @@ type localEnv struct {
 	stopFails bool
 	// stopped と started は、実行先の Meltype を終了させた回数と、起動した回数。
 	stopped, started int
+	// pathAdded と pathRemoved は、利用者の PATH に足すよう、外すよう求められたフォルダー。pathFails なら失敗する。
+	pathAdded, pathRemoved []string
+	pathFails              bool
 	// onStart は、Meltype を起動したディレクトリを受け取る。
 	onStart func(dir string)
 	// localAppData は、通常版の実行先とデータ先を置く、利用者の LocalAppData の代わり。
@@ -129,6 +132,20 @@ func (l *localEnv) run(t *testing.T, interactive bool, stdin string, args ...str
 				return false, errors.New("登録を書き換えられませんでした")
 			}
 			return true, nil
+		},
+		AddToUserPath: func(dir string) error {
+			l.pathAdded = append(l.pathAdded, dir)
+			if l.pathFails {
+				return errors.New("PATH を書き換えられませんでした")
+			}
+			return nil
+		},
+		RemoveFromUserPath: func(dir string) error {
+			l.pathRemoved = append(l.pathRemoved, dir)
+			if l.pathFails {
+				return errors.New("PATH を書き換えられませんでした")
+			}
+			return nil
 		},
 		StartUninstaller: func(selfinstall.Installation) error {
 			l.uninstallerStarts++
