@@ -64,6 +64,15 @@ vmeltype app update         # vMeltype 自身を新しいバージョンにす�
 
 設定、保持バージョン、スナップショットは管理ルート (既定は `%LOCALAPPDATA%\vMeltype`) に置きます。
 
+## 管理だけをやめる
+
+```powershell
+vmeltype detach                       # 通常版: 実行先とデータを残し、本家の自動更新を管理前の値に戻す
+vmeltype detach --to D:\Apps\Meltype  # portable 版: app と data を管理ルートの外へ写してから外す
+```
+
+vMeltype 自身、保持バージョン、スナップショットは残します。あとで `vmeltype use` すれば、また管理を始められます。
+
 ## vMeltype をやめる
 
 ```powershell
