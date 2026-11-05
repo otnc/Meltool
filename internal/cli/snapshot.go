@@ -110,8 +110,11 @@ func runSnapshotCreate(env *Env) func(*cobra.Command, []string) error {
 			return err
 		}
 		m, err := snapshot.Create(root, dataDir, snapshot.Meta{Reason: snapshot.ReasonManual, ActiveTag: activeTag(root)}, env.Now())
+		if errors.Is(err, snapshot.ErrNoData) && !place.active {
+			return errors.New("有効なバージョンがなく、保存するデータもありません。先に \"vmeltype use <tag>\" で有効にしてください")
+		}
 		if errors.Is(err, snapshot.ErrNoData) {
-			return fmt.Errorf("portable 版の data (%s) がないので、保存するものがありません", dataDir)
+			return fmt.Errorf("%s (%s) がないので、保存するものがありません", place.dataLabel(), dataDir)
 		}
 		if err != nil {
 			return err

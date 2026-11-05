@@ -12,6 +12,16 @@ type layout struct {
 	variant string
 	appDir  string
 	dataDir string
+	// active は、有効なバージョンの配置か。false なら、有効なバージョンがないので portable 版の配置を仮に返している。
+	active bool
+}
+
+// dataLabel は、データ先を利用者に示すときの名前を返す。
+func (l layout) dataLabel() string {
+	if l.variant == string(assets.Standard) {
+		return "通常版のデータ"
+	}
+	return "portable 版のデータ"
 }
 
 // layoutFor は、variant の実行先とデータ先を返す。通常版は、本家と同じく LocalAppData の下にする。
@@ -43,6 +53,7 @@ func activeLayout(env *Env, root string) (layout, error) {
 		return layout{}, err
 	}
 	l.appDir = state.Active.AppDir
+	l.active = true
 	return l, nil
 }
 
