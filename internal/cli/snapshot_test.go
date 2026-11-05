@@ -73,12 +73,38 @@ func TestSnapshotCreateStopsWhileMeltypeRuns(t *testing.T) {
 	}
 }
 
-func TestSnapshotCreateWithoutPortableData(t *testing.T) {
-	got := newLocalEnv(t).run(t, false, "", "snapshot", "create")
+func TestSnapshotCreateWithoutData(t *testing.T) {
+	t.Run("有効なバージョンがなければ、そのことと use を示す", func(t *testing.T) {
+		got := newLocalEnv(t).run(t, false, "", "snapshot", "create")
 
-	if got.code != ExitError || !strings.Contains(got.stderr, "data") {
-		t.Errorf("code = %d, stderr = %s", got.code, got.stderr)
-	}
+		if got.code != ExitError || !strings.Contains(got.stderr, "有効なバージョンがなく") || !strings.Contains(got.stderr, "vmeltype use") || strings.Contains(got.stderr, "portable") {
+			t.Errorf("code = %d, stderr = %s", got.code, got.stderr)
+		}
+	})
+	t.Run("通常版のデータがなければ、通常版のデータと言う", func(t *testing.T) {
+		l := managedStandard(t)
+		os.RemoveAll(l.standardDataDir())
+
+		got := l.run(t, false, "", "snapshot", "create")
+
+		if got.code != ExitError || !strings.Contains(got.stderr, "通常版のデータ ("+l.standardDataDir()+")") {
+			t.Errorf("code = %d, stderr = %s", got.code, got.stderr)
+		}
+	})
+	t.Run("portable 版のデータがなければ、portable 版のデータと言う", func(t *testing.T) {
+		l := newLocalEnv(t)
+		l.storePortable(t, "v1.4.0", nil)
+		if got := l.run(t, false, "", "use", "1.4.0", "--portable", "-y"); got.code != ExitOK {
+			t.Fatal(got.stderr)
+		}
+		os.RemoveAll(filepath.Join(l.appDir(), "data"))
+
+		got := l.run(t, false, "", "snapshot", "create")
+
+		if got.code != ExitError || !strings.Contains(got.stderr, "portable 版のデータ (") {
+			t.Errorf("code = %d, stderr = %s", got.code, got.stderr)
+		}
+	})
 }
 
 func TestSnapshotRestore(t *testing.T) {
