@@ -19,15 +19,17 @@ vMeltype は、日本語入力の [Meltype](https://github.com/yksr-melt/Meltype
 
 ## コマンド
 
+コマンドは `package.json` の `scripts` にまとめています。CI も同じものを使うので、手元でも pnpm 経由で動かしてください。一覧は CONTRIBUTING.md の "よく使うコマンド" にあります。
+
 | コマンド | 内容 |
 | --- | --- |
-| `gofmt -l .` | 整形が要るファイルを表示する。`gofmt -w .` で整形する |
-| `go vet ./...` | 静的な検査 |
-| `go test ./...` | 単体テスト |
-| `go build ./...` | ビルド |
-| `pnpm install` | コミットメッセージの検査 (commitlint) と Git のフックを入れる |
+| `pnpm install` | 道具 (commitlint など) と Git のフックを入れる |
+| `pnpm run check` | 整形の確認、静的な検査、ビルド、単体テストをまとめて動かす |
+| `pnpm run format` | 整形する |
+| `pnpm run lint`、`pnpm run lint:fix` | 静的な検査と、古い書き方の書き換え |
+| `pnpm test` | 単体テスト |
 
-変更を終えたら、`gofmt -l .` が何も出さず、`go vet ./...`、`go test ./...`、`go build ./...` が通ることを確かめてください。
+変更を終えたら、`pnpm run check` が通ることを確かめてください。
 
 Windows で開発しているので、手順やスクリプトに POSIX シェル前提の書き方 (`VAR=x cmd`、`rm -rf`) を使わないでください。
 
