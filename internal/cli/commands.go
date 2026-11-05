@@ -77,7 +77,7 @@ func commandSpecs(env *Env) []commandSpec {
 		}},
 		{use: "doctor", short: "管理ルートを診断し、直し方を示す。通信しない", flags: []commonFlag{flagJSON}, run: runDoctor(env)},
 		{use: "run", short: "有効なバージョンの Meltype を起動する。通信しない", run: runRun(env)},
-		{use: "detach", short: "いまの環境を残して管理をやめる", flags: change},
+		{use: "detach", short: "いまの Meltype を残して管理をやめる。通信しない", long: detachLong, flags: change, setup: setupDetachFlags, run: runDetach(env)},
 		{use: "track", short: "新しいバージョンへの自動の追従", subs: []commandSpec{
 			{use: "status", short: "追従の設定を表示する", flags: []commonFlag{flagJSON}},
 			{use: "enable", short: "追従を有効にする", flags: []commonFlag{flagJSON}},

@@ -31,6 +31,8 @@ type localEnv struct {
 	stopFails bool
 	// stopped と started は、実行先の Meltype を終了させた回数と、起動した回数。
 	stopped, started int
+	// onStart は、Meltype を起動したディレクトリを受け取る。
+	onStart func(dir string)
 	// localAppData は、通常版の実行先とデータ先を置く、利用者の LocalAppData の代わり。
 	localAppData string
 	// imeRegistered は、Meltype IME を PC に登録済みであることを真似る。
@@ -95,8 +97,11 @@ func (l *localEnv) run(t *testing.T, interactive bool, stdin string, args ...str
 			l.running = nil
 			return nil
 		},
-		StartApp: func(string) error {
+		StartApp: func(dir string) error {
 			l.started++
+			if l.onStart != nil {
+				l.onStart(dir)
+			}
 			return nil
 		},
 		LocalAppData:       func() (string, error) { return l.localAppData, nil },
