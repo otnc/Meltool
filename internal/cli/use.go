@@ -464,11 +464,11 @@ func resolveStored(st store.Store, q storedQuery, platform assets.Platform) (sto
 	_, otherMatches := versions.Select(other, q.query)
 	switch {
 	case otherMatches && q.variant == assets.Standard:
-		return store.Stored{}, fmt.Errorf("%s の通常版は保持していません。portable 版を対象にするなら --portable を付けてください", wanted)
+		return store.Stored{}, fmt.Errorf("%s通常版は保持していません。portable 版を対象にするなら --portable を付けてください", withParticle(wanted, "の"))
 	case otherMatches:
-		return store.Stored{}, fmt.Errorf("%s の portable 版は保持していません。通常版を対象にするなら --portable を外してください", wanted)
+		return store.Stored{}, fmt.Errorf("%s portable 版は保持していません。通常版を対象にするなら --portable を外してください", withParticle(wanted, "の"))
 	default:
-		return store.Stored{}, fmt.Errorf("%s は保持していません。先に \"%s\" を実行してください", wanted, q.installHint())
+		return store.Stored{}, fmt.Errorf("%s保持していません。先に \"%s\" を実行してください", withParticle(wanted, "は"), q.installHint())
 	}
 }
 

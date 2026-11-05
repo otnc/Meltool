@@ -89,7 +89,7 @@ func runInstall(env *Env) func(*cobra.Command, []string) error {
 		if offline {
 			c, err = catalog.Load(root)
 			if errors.Is(err, catalog.ErrNotFetched) {
-				return fmt.Errorf("%s は保持しておらず、保存済みの公式一覧もないので、--offline では取得できません", query.Describe())
+				return fmt.Errorf("%s保持しておらず、保存済みの公式一覧もないので、--offline では取得できません", withParticle(query.Describe(), "は"))
 			}
 		} else {
 			_, c, err = fetchCatalog(cmd, env, root)

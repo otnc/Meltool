@@ -463,6 +463,28 @@ func TestUseVersionQuery(t *testing.T) {
 		})
 	}
 
+	t.Run("バージョンを省いて合うものがなければ、日本語の語のあとに空白を入れずに示す", func(t *testing.T) {
+		l := newLocalEnv(t)
+		got := l.run(t, false, "", "use", "-y")
+		if got.code != ExitError || !strings.Contains(got.stderr, "正式版の最新は保持していません") {
+			t.Errorf("code = %d, stderr = %s", got.code, got.stderr)
+		}
+	})
+	t.Run("違う種類だけを保持していれば、日本語の語のあとに空白を入れずに示す", func(t *testing.T) {
+		l := newLocalEnv(t)
+		l.storePortable(t, "v1.4.0", nil)
+		got := l.run(t, false, "", "use", "-y")
+		if got.code != ExitError || !strings.Contains(got.stderr, "正式版の最新の通常版は保持していません") {
+			t.Errorf("code = %d, stderr = %s", got.code, got.stderr)
+		}
+	})
+	t.Run("バージョンを書いたときは、そのあとに空白を入れる", func(t *testing.T) {
+		l := newLocalEnv(t)
+		got := l.run(t, false, "", "use", "1.4.0", "-y")
+		if got.code != ExitError || !strings.Contains(got.stderr, "1.4.0 は保持していません") {
+			t.Errorf("code = %d, stderr = %s", got.code, got.stderr)
+		}
+	})
 	t.Run("合う保持バージョンがなければ、指定の意味と install を示す", func(t *testing.T) {
 		l := newLocalEnv(t)
 		l.storePortable(t, "v1.4.0", nil)

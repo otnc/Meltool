@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/fatih/color"
 	"github.com/mattn/go-runewidth"
@@ -64,4 +65,12 @@ func writeTable(w io.Writer, s style, rows [][]string) {
 		}
 		fmt.Fprintln(w, strings.TrimRight(line.String(), " "))
 	}
+}
+
+// withParticle は、s のあとに助詞を付ける。"1.4.0 は" のように英数字や記号のあとには空白を入れ、"正式版の最新は" のように日本語のあとには入れない。
+func withParticle(s, particle string) string {
+	if r, _ := utf8.DecodeLastRuneInString(s); r < utf8.RuneSelf {
+		return s + " " + particle
+	}
+	return s + particle
 }
