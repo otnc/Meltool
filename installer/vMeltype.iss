@@ -4,7 +4,7 @@
 ;
 ; アンインストールでは、ファイルを消す前に vmeltype app uninstall で管理ルートを片付ける。失敗したら何も消さずに中止する。
 ;
-; 処理はできるだけ vmeltype.exe (Go) に置き、ここには設定と、vmeltype を呼ぶところだけを書く。
+; 処理はできるだけ vmeltype.exe (Go) に置き、ここには設定と、vmeltype.exe を呼ぶところだけを書く。
 ; 入れるファイルは SourceDir の中身をまとめて入れるので、配布物にファイルを足してもここは変えなくてよい。
 ; PATH に足すのは app add-to-path、外すのは app uninstall --from-installer が行う。
 
@@ -53,7 +53,7 @@ Name: "japanese"; MessagesFile: "compiler:Languages\Japanese.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "addtopath"; Description: "vmeltype を PATH に追加する (どのフォルダーからでも vmeltype で使えるようにする)"
+Name: "addtopath"; Description: "vMeltype を PATH に追加する (どのフォルダーからでも vmeltype コマンドを使えるようにする)"
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
