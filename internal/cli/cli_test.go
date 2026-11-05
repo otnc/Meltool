@@ -68,7 +68,7 @@ func TestRunWithoutArguments(t *testing.T) {
 }
 
 func TestHelpHidesUnimplementedCommands(t *testing.T) {
-	for _, tt := range []struct{ parent, name string }{{"", "detach"}, {"", "track"}} {
+	for _, tt := range []struct{ parent, name string }{{"", "track"}} {
 		t.Run(strings.TrimSpace(tt.parent+" "+tt.name)+" は一覧に出さない", func(t *testing.T) {
 			help := execute(t, strings.Fields(tt.parent+" --help")...)
 			if strings.Contains(help.stdout, "\n  "+tt.name+" ") {
@@ -196,7 +196,7 @@ func TestShortOptionsMatchLongOptions(t *testing.T) {
 }
 
 func TestUnimplementedCommandsFailWithoutChangingAnything(t *testing.T) {
-	got := execute(t, "detach", "-y")
+	got := execute(t, "track", "enable")
 
 	if got.code != ExitError {
 		t.Errorf("code = %d, want %d", got.code, ExitError)
