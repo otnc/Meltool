@@ -65,6 +65,20 @@ vmeltype app update         # vMeltype 自身を新しいバージョンにす�
 
 設定、保持バージョン、スナップショットは管理ルート (既定は `%LOCALAPPDATA%\vMeltype`) に置きます。
 
+## 新しいバージョンに自動で追従する
+
+```powershell
+vmeltype track enable                    # 1 日ごとに、新しい正式版があるかを確かめて知らせる
+vmeltype track enable --mode download    # 見つけたら取得して、適用待ちにする (vmeltype apply で適用する)
+vmeltype track enable --mode apply --channel prerelease --push  # プレリリースも追い、条件がそろえば切り替え、OS の通知でも知らせる
+vmeltype track status                    # 設定と、最後に確かめた結果を表示する
+vmeltype track disable                   # やめる
+```
+
+既定は無効です。有効にすると、OS のスケジューラー (Windows はタスク スケジューラー、macOS は LaunchAgent、Linux は systemd のユーザー タイマー) に、確かめる処理を利用者ごとに登録します。管理者権限は使いません。
+
+`--mode apply` でも、固定しているとき、Meltype が動いているとき、Meltype IME の DLL の入れ替えに管理者権限が要るときは切り替えず、理由を付けて適用待ちにします。見つけたことなどは、次に `vmeltype status` などを使ったときに示します。`--push` を付けると OS の通知でも知らせます。有効にするときに試しの通知を 1 つ出し、OS が許可を求めることがあります。Linux では `notify-send` を使います。
+
 ## 管理だけをやめる
 
 ```powershell

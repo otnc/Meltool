@@ -38,7 +38,7 @@ pnpm run build
 | `pnpm run test:race` | 競合も調べる単体テスト (`go test -race ./...`) |
 | `pnpm dist -version <バージョン> [-goos <OS> -goarch <CPU>] [-zip]` | 配布物 (`dist/vMeltype-<バージョン>-<platform>/`、`-zip` で ZIP も) を作る |
 | `pnpm installer:build -Version <バージョン> -SourceDir <配布物> -OutputDir <置き場所>` | Windows のインストーラーを作る。Inno Setup が要る |
-| `pnpm installer:smoke`、`pnpm upstream:portable`、`pnpm upstream:standard` | インストーラーと本家との通しの検査。利用者の環境を書き換えるので、GitHub Actions の中でだけ動く |
+| `pnpm installer:smoke`、`pnpm upstream:portable`、`pnpm upstream:standard`、`pnpm track:smoke` | インストーラー、本家との通し、追従の登録の検査。利用者の環境を書き換えるので、GitHub Actions の中でだけ動く |
 | `pnpm commitlint` | コミットメッセージの検査 |
 
 ## 作業の流れ
