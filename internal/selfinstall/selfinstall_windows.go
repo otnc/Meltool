@@ -69,3 +69,37 @@ func StartUninstaller(inst Installation) error {
 	}
 	return cmd.Process.Release()
 }
+
+// environmentKey は、利用者の環境変数のキー。
+const environmentKey = `Environment`
+
+// AddToUserPath は、利用者の PATH に dir を足す。既にあれば何もしない。
+// PATH は %USERPROFILE% などを含むことがあるので、展開せずに読み、REG_EXPAND_SZ で書き戻す。動いているアプリへの知らせは、インストーラーに任せる。
+func AddToUserPath(dir string) error {
+	return changeUserPath(func(paths string) (string, bool) { return PathWith(paths, dir) })
+}
+
+// RemoveFromUserPath は、利用者の PATH から dir を外す。なければ何もしない。
+func RemoveFromUserPath(dir string) error {
+	return changeUserPath(func(paths string) (string, bool) { return PathWithout(paths, dir) })
+}
+
+func changeUserPath(change func(string) (string, bool)) error {
+	key, _, err := registry.CreateKey(registry.CURRENT_USER, environmentKey, registry.QUERY_VALUE|registry.SET_VALUE)
+	if err != nil {
+		return fmt.Errorf("利用者の環境変数を開けませんでした: %w", err)
+	}
+	defer key.Close()
+	paths, _, err := key.GetStringValue("Path")
+	if err != nil && !errors.Is(err, registry.ErrNotExist) {
+		return fmt.Errorf("利用者の PATH を読めませんでした: %w", err)
+	}
+	changed, ok := change(paths)
+	if !ok {
+		return nil
+	}
+	if err := key.SetExpandStringValue("Path", changed); err != nil {
+		return fmt.Errorf("利用者の PATH を書き換えられませんでした: %w", err)
+	}
+	return nil
+}
