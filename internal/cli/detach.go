@@ -117,6 +117,11 @@ func runDetach(env *Env) func(*cobra.Command, []string) error {
 		} else if err = lifecycle.Detach(root, place.dataDir); err != nil {
 			return err
 		}
+		if stoppedTrack, trackErr := disableTrack(env, root); trackErr != nil {
+			env.warnf("%v。\"vmeltype track disable\" で外してください", trackErr)
+		} else if stoppedTrack {
+			fmt.Fprintln(cmd.ErrOrStderr(), "追従を無効にし、OS のスケジューラーへの登録を外しました。")
+		}
 
 		if asJSON {
 			return writeJSON(out, map[string]any{"tag": state.Active.Tag, "variant": state.Active.Variant, "appDir": restartDir})

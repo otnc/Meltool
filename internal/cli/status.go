@@ -20,6 +20,8 @@ type localStatus struct {
 	DataExists bool     `json:"dataExists"`
 	// PendingRequest は、適用待ちの要求。lifecycle.Status の Pending (中断した処理記録) とは別のもの。
 	PendingRequest *lifecycle.Pending `json:"pendingRequest,omitempty"`
+	// TrackNotice は、追従の処理が見つけた、まだ有効にしていない新しいバージョンの知らせ。
+	TrackNotice string `json:"trackNotice,omitempty"`
 }
 
 func inspectLocal(env *Env, root string) (localStatus, error) {
@@ -44,6 +46,9 @@ func inspectLocal(env *Env, root string) (localStatus, error) {
 	}
 	if s.PendingRequest, err = lifecycle.LoadPending(root); err != nil {
 		return localStatus{}, err
+	}
+	if s.Active != nil && s.PendingRequest == nil {
+		s.TrackNotice = trackNotice(root, s.Active.Tag)
 	}
 	return s, nil
 }
@@ -74,6 +79,9 @@ func writeStatus(w io.Writer, s localStatus) {
 	}
 	if s.PendingRequest != nil {
 		fmt.Fprintf(w, "適用待ち:         %s。\"vmeltype apply\" で適用します\n", describePending(s.PendingRequest))
+	}
+	if s.TrackNotice != "" {
+		fmt.Fprintf(w, "追従:             %s\n", s.TrackNotice)
 	}
 	if s.Active == nil {
 		fmt.Fprintln(w, "有効なバージョン: 有効なバージョンはありません。\"vmeltype use <tag>\" で有効にします")

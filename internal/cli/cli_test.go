@@ -67,22 +67,7 @@ func TestRunWithoutArguments(t *testing.T) {
 	})
 }
 
-func TestHelpHidesUnimplementedCommands(t *testing.T) {
-	for _, tt := range []struct{ parent, name string }{{"", "track"}} {
-		t.Run(strings.TrimSpace(tt.parent+" "+tt.name)+" は一覧に出さない", func(t *testing.T) {
-			help := execute(t, strings.Fields(tt.parent+" --help")...)
-			if strings.Contains(help.stdout, "\n  "+tt.name+" ") {
-				t.Errorf("一覧に %s がある:\n%s", tt.name, help.stdout)
-			}
-		})
-	}
-	t.Run("一覧から隠したコマンドを打てば、まだないことを示す", func(t *testing.T) {
-		got := execute(t, "track", "status")
-
-		if got.code != ExitError || !strings.Contains(got.stderr, "まだ実装していません") {
-			t.Errorf("code = %d, stderr = %s", got.code, got.stderr)
-		}
-	})
+func TestHelpListsCommands(t *testing.T) {
 	t.Run("作ったコマンドは一覧に出す", func(t *testing.T) {
 		help := execute(t, "app", "--help")
 		if !strings.Contains(help.stdout, "\n  config ") || !strings.Contains(help.stdout, "\n  version ") {
@@ -192,17 +177,6 @@ func TestShortOptionsMatchLongOptions(t *testing.T) {
 				t.Errorf("短縮形と長い名前で結果が異なる\n短縮形: %+v\n長い名前: %+v", viaShort, viaLong)
 			}
 		})
-	}
-}
-
-func TestUnimplementedCommandsFailWithoutChangingAnything(t *testing.T) {
-	got := execute(t, "track", "enable")
-
-	if got.code != ExitError {
-		t.Errorf("code = %d, want %d", got.code, ExitError)
-	}
-	if !strings.Contains(got.stderr, "まだ実装していません") {
-		t.Errorf("未実装であることを示していない: %s", got.stderr)
 	}
 }
 

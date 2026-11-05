@@ -33,7 +33,7 @@ func setupUpdateFlags(cmd *cobra.Command) {
 }
 
 // findUpdate は、有効なバージョンより新しいバージョンを公式一覧から探す。この端末の、有効なバージョンと同じ variant の配布物があるリリースだけを候補にする。
-func findUpdate(cmd *cobra.Command, env *Env, root string) (*lifecycle.Activation, *catalog.Release, error) {
+func findUpdate(cmd *cobra.Command, env *Env, root string, pre bool) (*lifecycle.Activation, *catalog.Release, error) {
 	state, err := lifecycle.LoadState(root)
 	if err != nil {
 		return nil, nil, err
@@ -45,7 +45,6 @@ func findUpdate(cmd *cobra.Command, env *Env, root string) (*lifecycle.Activatio
 	if err != nil {
 		return nil, nil, err
 	}
-	pre, _ := cmd.Flags().GetBool("pre")
 	byTag := map[string]catalog.Release{}
 	var candidates []versions.Candidate
 	for _, r := range c.Releases() {
@@ -69,7 +68,8 @@ func runCheck(env *Env) func(*cobra.Command, []string) error {
 		if err != nil {
 			return err
 		}
-		active, release, err := findUpdate(cmd, env, root)
+		pre, _ := cmd.Flags().GetBool("pre")
+		active, release, err := findUpdate(cmd, env, root, pre)
 		if err != nil {
 			return err
 		}
@@ -107,7 +107,8 @@ func runUpdate(env *Env) func(*cobra.Command, []string) error {
 		if err != nil {
 			return err
 		}
-		active, release, err := findUpdate(cmd, env, root)
+		pre, _ := cmd.Flags().GetBool("pre")
+		active, release, err := findUpdate(cmd, env, root, pre)
 		if err != nil {
 			return err
 		}

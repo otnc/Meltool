@@ -16,6 +16,7 @@ import (
 	"github.com/otnc/vmeltype/internal/appctl"
 	"github.com/otnc/vmeltype/internal/archive"
 	"github.com/otnc/vmeltype/internal/assets"
+	"github.com/otnc/vmeltype/internal/lifecycle"
 	"github.com/otnc/vmeltype/internal/selfinstall"
 	"github.com/otnc/vmeltype/internal/store"
 	"github.com/otnc/vmeltype/internal/winime"
@@ -34,6 +35,14 @@ type localEnv struct {
 	// pathAdded と pathRemoved は、利用者の PATH に足すよう、外すよう求められたフォルダー。pathFails なら失敗する。
 	pathAdded, pathRemoved []string
 	pathFails              bool
+	// registrations と unregistrations は、追従の処理の OS への登録と、外すよう求められた記録。registerFails なら登録に失敗する。
+	registrations   []trackRegisterCall
+	unregistrations []lifecycle.TrackRegistration
+	registerFails   bool
+	// pushAsked は、push 通知の権限を求めた回数。pushDenied なら断られる。pushes は、出した通知の本文。
+	pushAsked  int
+	pushDenied bool
+	pushes     []string
 	// onStart は、Meltype を起動したディレクトリを受け取る。
 	onStart func(dir string)
 	// localAppData は、通常版の実行先とデータ先を置く、利用者の LocalAppData の代わり。
@@ -145,6 +154,28 @@ func (l *localEnv) run(t *testing.T, interactive bool, stdin string, args ...str
 			if l.pathFails {
 				return errors.New("PATH を書き換えられませんでした")
 			}
+			return nil
+		},
+		RegisterTrack: func(exe, root string, interval time.Duration) (lifecycle.TrackRegistration, error) {
+			l.registrations = append(l.registrations, trackRegisterCall{exe: exe, root: root, interval: interval})
+			if l.registerFails {
+				return lifecycle.TrackRegistration{}, errors.New("スケジューラーに登録できませんでした")
+			}
+			return lifecycle.TrackRegistration{Kind: "fake", ID: "vMeltype-track"}, nil
+		},
+		UnregisterTrack: func(r lifecycle.TrackRegistration) error {
+			l.unregistrations = append(l.unregistrations, r)
+			return nil
+		},
+		RequestPush: func() error {
+			l.pushAsked++
+			if l.pushDenied {
+				return errors.New("通知が許可されませんでした")
+			}
+			return nil
+		},
+		Push: func(title, body string) error {
+			l.pushes = append(l.pushes, body)
 			return nil
 		},
 		StartUninstaller: func(selfinstall.Installation) error {
