@@ -80,6 +80,10 @@ func diagnose(env *Env, root string) []check {
 		checks = append(checks, check{Name: "state", Level: levelFail, Message: fmt.Sprintf("有効なバージョンの記録か処理記録を読めません: %v", err), Hint: "記録のファイルを手で確かめてください"})
 	} else {
 		checks = append(checks, journalCheck(s), deploymentCheck(s))
+		if s.PendingRequest != nil {
+			checks = append(checks, check{Name: "pending", Level: levelWarn, Message: "適用待ちの要求があります: " + describePending(s.PendingRequest),
+				Hint: "\"vmeltype apply\" で適用するか、\"vmeltype apply --discard\" で取り消してください"})
+		}
 		if c, ok := previousCheck(root, s); ok {
 			checks = append(checks, c)
 		}
