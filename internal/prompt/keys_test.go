@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -14,10 +15,8 @@ type fakeKeys struct {
 }
 
 func (f *fakeKeys) listen(handle func(Key) bool) error {
-	for _, k := range f.keys {
-		if handle(k) {
-			return nil
-		}
+	if slices.ContainsFunc(f.keys, handle) {
+		return nil
 	}
 	return nil
 }
@@ -33,7 +32,7 @@ func runes(s string) []Key {
 // rendered は、端末と同じく \b で 1 文字戻って上書きしたときに、画面に残る行を返す。
 func rendered(out string) []string {
 	var lines []string
-	for _, raw := range strings.Split(strings.TrimSuffix(out, "\n"), "\n") {
+	for raw := range strings.SplitSeq(strings.TrimSuffix(out, "\n"), "\n") {
 		var line []rune
 		pos := 0
 		for _, r := range raw {

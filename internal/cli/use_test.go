@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"maps"
 	"os"
 	"path/filepath"
 	"sort"
@@ -234,9 +235,7 @@ func (l *localEnv) storeFiles(t *testing.T, tag, variant string, files map[strin
 func (l *localEnv) storePortable(t *testing.T, tag string, extra map[string]string) {
 	t.Helper()
 	files := map[string]string{"Meltype.exe": "exe " + tag, "Meltype.portable": "portable", "dotnet/host.dll": "dll " + tag}
-	for k, v := range extra {
-		files[k] = v
-	}
+	maps.Copy(files, extra)
 	l.storeFiles(t, tag, "portable", files)
 }
 

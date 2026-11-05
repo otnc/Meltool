@@ -293,7 +293,7 @@ func portableUserdict(l *localEnv) string {
 
 // lineWith は、text のうち substr を含む最初の行を返す。
 func lineWith(text, substr string) string {
-	for _, line := range strings.Split(text, "\n") {
+	for line := range strings.SplitSeq(text, "\n") {
 		if strings.Contains(line, substr) {
 			return line
 		}

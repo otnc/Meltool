@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 )
 
 // MkdirAll は、path までの足りないディレクトリを、本人だけが使える権限で作る。
@@ -34,9 +35,9 @@ func MkdirAll(path string) error {
 			break
 		}
 	}
-	for i := len(missing) - 1; i >= 0; i-- {
-		if err := mkdirPrivate(missing[i]); err != nil && !errors.Is(err, fs.ErrExist) {
-			return fmt.Errorf("%s を作れませんでした: %w", missing[i], err)
+	for _, m := range slices.Backward(missing) {
+		if err := mkdirPrivate(m); err != nil && !errors.Is(err, fs.ErrExist) {
+			return fmt.Errorf("%s を作れませんでした: %w", m, err)
 		}
 	}
 	return nil

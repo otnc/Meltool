@@ -36,19 +36,19 @@ func TestDisableAutoUpdate(t *testing.T) {
 			name:     "true を false にし、ほかの項目と並びと空白を保つ",
 			body:     "{\n  \"Enabled\": true,\n  \"AutoUpdate\": true,\n  \"Future\": {\"AutoUpdate\": true}\n}",
 			want:     "{\n  \"Enabled\": true,\n  \"AutoUpdate\": false,\n  \"Future\": {\"AutoUpdate\": true}\n}",
-			original: Original{FileExisted: true, AutoUpdate: ptr(true)},
+			original: Original{FileExisted: true, AutoUpdate: new(true)},
 		},
 		{
 			name:     "既に false なら変えない",
 			body:     "{\"AutoUpdate\":false}",
 			want:     "{\"AutoUpdate\":false}",
-			original: Original{FileExisted: true, AutoUpdate: ptr(false)},
+			original: Original{FileExisted: true, AutoUpdate: new(false)},
 		},
 		{
 			name:     "BOM を保つ",
 			body:     "\xEF\xBB\xBF{\"AutoUpdate\": true}",
 			want:     "\xEF\xBB\xBF{\"AutoUpdate\": false}",
-			original: Original{FileExisted: true, AutoUpdate: ptr(true)},
+			original: Original{FileExisted: true, AutoUpdate: new(true)},
 		},
 	}
 	for _, tt := range tests {
@@ -121,7 +121,8 @@ func TestDisableAutoUpdateLeavesUnreadableConfig(t *testing.T) {
 	}
 }
 
-func ptr(b bool) *bool { return &b }
+//go:fix inline
+func ptr(b bool) *bool { return new(b) }
 
 func sameBool(a, b *bool) bool {
 	return (a == nil && b == nil) || (a != nil && b != nil && *a == *b)
@@ -133,9 +134,9 @@ func TestRestoreAutoUpdate(t *testing.T) {
 		original Original
 		want     string
 	}{
-		{name: "管理前が true なら true に戻し、ほかの項目は変えない", original: Original{FileExisted: true, AutoUpdate: ptr(true)}, want: "{\n  \"Enabled\": true,\n  \"AutoUpdate\": true\n}"},
+		{name: "管理前が true なら true に戻し、ほかの項目は変えない", original: Original{FileExisted: true, AutoUpdate: new(true)}, want: "{\n  \"Enabled\": true,\n  \"AutoUpdate\": true\n}"},
 		{name: "管理前に項目がなければ、本家の既定の true に戻す", original: Original{FileExisted: true}, want: "{\n  \"Enabled\": true,\n  \"AutoUpdate\": true\n}"},
-		{name: "管理前が false なら false のまま", original: Original{FileExisted: true, AutoUpdate: ptr(false)}, want: "{\n  \"Enabled\": true,\n  \"AutoUpdate\": false\n}"},
+		{name: "管理前が false なら false のまま", original: Original{FileExisted: true, AutoUpdate: new(false)}, want: "{\n  \"Enabled\": true,\n  \"AutoUpdate\": false\n}"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -152,7 +153,7 @@ func TestRestoreAutoUpdate(t *testing.T) {
 	t.Run("ファイルがなければ作らない", func(t *testing.T) {
 		path := filepath.Join(t.TempDir(), "config.json")
 
-		if err := RestoreAutoUpdate(path, Original{AutoUpdate: ptr(true)}); err != nil {
+		if err := RestoreAutoUpdate(path, Original{AutoUpdate: new(true)}); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := os.Stat(path); !os.IsNotExist(err) {
