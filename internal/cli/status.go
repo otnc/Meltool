@@ -18,6 +18,8 @@ type localStatus struct {
 	Running    []string `json:"running"`
 	DataDir    string   `json:"dataDir"`
 	DataExists bool     `json:"dataExists"`
+	// PendingRequest は、適用待ちの要求。lifecycle.Status の Pending (中断した処理記録) とは別のもの。
+	PendingRequest *lifecycle.Pending `json:"pendingRequest,omitempty"`
 }
 
 func inspectLocal(env *Env, root string) (localStatus, error) {
@@ -39,6 +41,9 @@ func inspectLocal(env *Env, root string) (localStatus, error) {
 	}
 	if info, err := os.Stat(s.DataDir); err == nil && info.IsDir() {
 		s.DataExists = true
+	}
+	if s.PendingRequest, err = lifecycle.LoadPending(root); err != nil {
+		return localStatus{}, err
 	}
 	return s, nil
 }
@@ -67,6 +72,9 @@ func writeStatus(w io.Writer, s localStatus) {
 	if s.Pending != nil {
 		fmt.Fprintf(w, "未完了の処理:     %s。\"vmeltype recover\" で復旧してください\n", describeJournal(s.Pending))
 	}
+	if s.PendingRequest != nil {
+		fmt.Fprintf(w, "適用待ち:         %s。\"vmeltype apply\" で適用します\n", describePending(s.PendingRequest))
+	}
 	if s.Active == nil {
 		fmt.Fprintln(w, "有効なバージョン: 有効なバージョンはありません。\"vmeltype use <tag>\" で有効にします")
 		return
@@ -94,6 +102,10 @@ func writeStatus(w io.Writer, s localStatus) {
 		data = "あります"
 	}
 	fmt.Fprintf(w, "データ先:         %s (%s)\n", s.DataDir, data)
+}
+
+func describePending(p *lifecycle.Pending) string {
+	return fmt.Sprintf("%s (%s、%s に記録。理由: %s)", p.Tag, variantLabels[p.Variant], p.CreatedAt.Local().Format("2006-01-02 15:04"), p.Reason)
 }
 
 func describeJournal(j *lifecycle.Journal) string {

@@ -135,6 +135,9 @@ func switchVersion(cmd *cobra.Command, env *Env, root string, st store.Store, ta
 	}
 	out := cmd.OutOrStdout()
 	if plan.UpToDate && !force {
+		if !dryRun {
+			discardAppliedPending(env, root, target.ID)
+		}
 		if asJSON {
 			return writeJSON(out, map[string]any{"changed": false, "active": target.ID})
 		}
@@ -204,6 +207,7 @@ func switchVersion(cmd *cobra.Command, env *Env, root string, st store.Store, ta
 		updateDisplayVersion(env, plan.AppDir, target.Tag)
 		pruneAutoSnapshots(cmd, env, root)
 	}
+	discardAppliedPending(env, root, target.ID)
 	if asJSON {
 		return writeJSON(out, map[string]any{"changed": true, "active": target.ID, "appDir": plan.AppDir})
 	}
@@ -340,6 +344,11 @@ func runUninstall(env *Env) func(*cobra.Command, []string) error {
 		}
 		if state.Active != nil && state.Active.StoreID == target.ID {
 			return fmt.Errorf("%s は有効なバージョンなので削除できません。別のバージョンに切り替えてから削除してください", target.ID)
+		}
+		if pending, err := lifecycle.LoadPending(root); err != nil {
+			return err
+		} else if pending != nil && pending.StoreID == target.ID {
+			return fmt.Errorf("%s は適用待ちなので削除できません。\"vmeltype apply --discard\" で適用待ちを取り消してから削除してください", target.ID)
 		}
 
 		planOut := cmd.OutOrStdout()

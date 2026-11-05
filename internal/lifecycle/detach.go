@@ -12,7 +12,7 @@ import (
 	"github.com/otnc/vmeltype/internal/upstreamconf"
 )
 
-// Detach は、管理の記録 (有効なバージョン、直前のバージョン、固定、管理前の記録) を外す。保持バージョンとスナップショットは残す。
+// Detach は、管理の記録 (有効なバージョン、直前のバージョン、固定、適用待ち、管理前の記録) を外す。保持バージョンとスナップショットは残す。
 // standardDataDir が空でなければ、先に本家の自動更新を管理前の値に戻し、戻せなければ何も外さない。
 // 管理前の記録も外すので、あとで use したときは、その時点の環境を管理前として記録し直す。
 // 呼び出し側は、管理ルートの排他を取り、未完了の処理記録がないことを確かめ、Meltype を止めておく。
@@ -27,6 +27,9 @@ func Detach(root, standardDataDir string) error {
 		}
 	}
 	if err := saveState(root, State{}); err != nil {
+		return err
+	}
+	if _, err := DiscardPending(root); err != nil {
 		return err
 	}
 	if err := os.Remove(baselinePath(root)); err != nil && !errors.Is(err, os.ErrNotExist) {

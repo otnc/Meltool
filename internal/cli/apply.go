@@ -17,13 +17,17 @@ import (
 	"github.com/otnc/vmeltype/internal/winime"
 )
 
-const applyLong = `有効なバージョンを、保持したものから修復します。通信しません。
+const applyLong = `適用待ちの要求があれば適用し、なければ有効なバージョンを、保持したものから修復します。通信しません。
+
+適用待ちの要求は、条件がそろわずに切り替えられなかったバージョンの記録です。apply は、use と同じ処理でそのバージョンに切り替え、終わったら記録を消します。固定 (pin) と違うバージョンなら、--override-pin がなければ切り替えません。--discard で、適用せずに取り消します。
 
 実行先が保持バージョンと違う、本家の自動更新が動いている、登録済みの Meltype IME の DLL が有効なバージョンのものと違う、のどれかなら、"use --force" と同じ処理で置き直します。どれもなければ何もしません。--force を付けると、一致していても置き直します。
 --ime を付けると、通常版で Meltype IME を登録していなければ登録します。管理者権限の確認 (UAC) が出ます。日本語のキーボードの一覧の末尾に Meltype を足しますが、既定の入力方式は変えません。前に登録を断っていても登録します。`
 
 func setupApplyFlags(cmd *cobra.Command) {
 	cmd.Flags().Bool("ime", false, "通常版で Meltype IME を登録していなければ登録する。管理者権限の確認 (UAC) が出る")
+	cmd.Flags().Bool("discard", false, "適用待ちの要求を、適用せずに取り消す")
+	addOverridePinFlag(cmd)
 	addStopAppFlag(cmd)
 }
 
@@ -43,11 +47,25 @@ func runApply(env *Env) func(*cobra.Command, []string) error {
 		} else if journal != nil {
 			return lifecycle.ErrPendingJournal
 		}
+		if discard, _ := flags.GetBool("discard"); discard {
+			return discardPending(cmd, root, dryRun, asJSON)
+		}
 		state, err := lifecycle.LoadState(root)
 		if err != nil {
 			return err
 		}
 		active := state.Active
+		pending, err := lifecycle.LoadPending(root)
+		if err != nil {
+			return err
+		}
+		if pending != nil && (active == nil || pending.StoreID != active.StoreID) {
+			return applyPending(cmd, env, root, *pending, ime)
+		}
+		if pending != nil && !dryRun {
+			// 適用待ちのバージョンは既に有効なので、記録だけを消し、いつもの修復に進む
+			discardAppliedPending(env, root, pending.StoreID)
+		}
 		if active == nil {
 			return errors.New("有効なバージョンがないので、修復するものがありません。\"vmeltype use <tag>\" で有効にしてください")
 		}
@@ -170,4 +188,78 @@ func registerIME(cmd *cobra.Command, env *Env, appDir, tag string) (winime.Resul
 		return result, imeResultError(result, tag)
 	}
 	return result, nil
+}
+
+// applyPending は、適用待ちのバージョンに、use と同じ処理で切り替える。切り替え終えたら、switchVersion が記録を消す。
+func applyPending(cmd *cobra.Command, env *Env, root string, pending lifecycle.Pending, ime bool) error {
+	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	asJSON, _ := cmd.Flags().GetBool("json")
+	st := store.Store{Root: root}
+	target, err := st.Get(pending.StoreID)
+	if err != nil {
+		return fmt.Errorf("適用待ちの %s を保持していないので、適用できません。取得し直すなら \"%s\"、取り消すなら \"vmeltype apply --discard\" を実行してください: %w", pending.Tag, installCommand(pending.Tag, pending.Variant), err)
+	}
+	standard := target.Variant == string(assets.Standard)
+	if ime && !standard {
+		return fmt.Errorf("適用待ちの %s は portable 版なので、Meltype IME を登録できません。--ime を外して実行してください", target.Tag)
+	}
+	out := cmd.OutOrStdout()
+	planOut := out
+	if asJSON {
+		planOut = cmd.ErrOrStderr()
+		cmd.SetOut(io.Discard)
+	}
+	fmt.Fprintf(planOut, "適用待ち:     %s\n", describePending(&pending))
+	err = switchVersion(cmd, env, root, st, target, false, "%s を適用しますか？", "%s を適用しました")
+	cmd.SetOut(out)
+	if err != nil {
+		return err
+	}
+	var registered winime.Result
+	if ime {
+		if registered, err = registerIME(cmd, env, filepath.Join(st.Path(target.ID), "files", "app"), target.Tag); err != nil {
+			return err
+		}
+	}
+	if asJSON {
+		return writeJSON(out, map[string]any{"dryRun": dryRun, "active": target.ID, "applied": pending, "ime": string(registered)})
+	}
+	return nil
+}
+
+func discardPending(cmd *cobra.Command, root string, dryRun, asJSON bool) error {
+	lock, err := lifecycle.AcquireLock(root)
+	if err != nil {
+		return err
+	}
+	defer lock.Release()
+	pending, err := lifecycle.LoadPending(root)
+	if err != nil {
+		return err
+	}
+	out := cmd.OutOrStdout()
+	if pending != nil && !dryRun {
+		if _, err := lifecycle.DiscardPending(root); err != nil {
+			return err
+		}
+	}
+	if asJSON {
+		return writeJSON(out, map[string]any{"dryRun": dryRun, "discarded": pending})
+	}
+	switch {
+	case pending == nil:
+		fmt.Fprintln(out, "適用待ちの要求はありません。")
+	case dryRun:
+		fmt.Fprintf(out, "適用待ちの %s を取り消します。\n", describePending(pending))
+	default:
+		fmt.Fprintf(out, "適用待ちの %s を取り消しました。有効なバージョンは変えていません。\n", describePending(pending))
+	}
+	return nil
+}
+
+// discardAppliedPending は、storeID に切り替え終えたときに、そのバージョンの適用待ちを消す。切り替えは終わっているので、消せなくても警告だけにする。
+func discardAppliedPending(env *Env, root, storeID string) {
+	if err := lifecycle.DiscardPendingFor(root, storeID); err != nil {
+		env.warnf("適用待ちの記録を消せませんでした。\"vmeltype apply --discard\" で取り消してください: %v", err)
+	}
 }

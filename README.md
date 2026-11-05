@@ -37,8 +37,9 @@ vmeltype install            # 公式の一覧から選んで取得する (use �
 vmeltype check              # 新しいバージョンがあるかを確かめる
 vmeltype update             # 新しいバージョンを取得して切り替える (upgrade でも同じ)
 vmeltype rollback           # 直前のバージョンに戻す
-vmeltype apply              # 有効なバージョンを、保持したものから修復する。通信しない
+vmeltype apply              # 適用待ちのバージョンがあれば適用し、なければ有効なバージョンを修復する。通信しない
 vmeltype apply --ime        # 通常版で Meltype IME を登録していなければ登録する。既定の入力方式は変えない
+vmeltype apply --discard    # 適用待ちのバージョンを、適用せずに取り消す
 vmeltype pin                # いまのバージョンから切り替えないよう固定する
 vmeltype snapshot create    # Meltype のデータを保存する
 vmeltype snapshot export <id> data.vmeltype-snapshot  # 保存したデータを 1 つのファイルにする。別の PC で import できる
