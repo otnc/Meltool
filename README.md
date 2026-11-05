@@ -33,6 +33,7 @@ vmeltype                    # いまの状態 (status と同じ) とヘルプを
 vmeltype releases           # 公式のリリースの一覧を表示する
 vmeltype install 1.4.0      # 取得して保持する。有効なバージョンは変えない
 vmeltype use 1.4.0          # 保持したバージョンに切り替える。通信しない
+vmeltype install            # 公式の一覧から選んで取得する (use なら保持したものから選ぶ)
 vmeltype check              # 新しいバージョンがあるかを確かめる
 vmeltype update             # 新しいバージョンを取得して切り替える (upgrade でも同じ)
 vmeltype rollback           # 直前のバージョンに戻す
@@ -49,7 +50,7 @@ vmeltype app check          # vMeltype 自身の新しいバージョンがあ�
 vmeltype app update         # vMeltype 自身を新しいバージョンにする (self upgrade でも同じ)
 ```
 
-`--pre` を付けるとプレリリース、`--portable` を付けると portable 版を対象にします。各コマンドの説明は `vmeltype <コマンド> --help` で表示します。
+端末でバージョンを省くと、候補を選ぶ画面を出します。矢印キーで動かし、`/` で絞り込み (正式版、プレリリースでも絞れる)、Enter で決め、Esc で中止します。端末でないときと `--json` のとき、`latest` と書いたときは正式版の最新を選びます。`--pre` を付けるとプレリリース、`--portable` を付けると portable 版を対象にします。各コマンドの説明は `vmeltype <コマンド> --help` で表示します。
 
 変更の前の確認は、y か n を押すだけで答えられます。Enter は既定 (`[Y/n]` なら y、`[y/N]` なら n) を選び、Esc で中止します。確認せずに進めるには `-y` を付けます。エラーや警告などには、出力先が端末のときだけ色を付けます。環境変数 `NO_COLOR` があれば色を付けません。
 
