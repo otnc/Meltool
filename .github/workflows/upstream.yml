@@ -1,6 +1,6 @@
 name: 本家との通しの検査
 
-# 本家の公式の配布物を取得し、使い捨ての Windows で vmeltype を通しで動かす。
+# 本家の公式の配布物を取得し、使い捨ての Windows で vMeltype を通しで動かす。
 # 本家の配布物と GitHub の API に依るので、ふだんの PR の CI には入れない。手で起動したときと、この検査を変えた PR でだけ動かす
 on:
   pull_request:

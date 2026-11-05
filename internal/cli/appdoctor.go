@@ -106,7 +106,7 @@ func pathCheck(env *Env, exe string) check {
 		}
 	}
 	return check{Name: "path", Level: levelWarn, Message: fmt.Sprintf("vmeltype.exe のフォルダー (%s) は PATH にありません", dir),
-		Hint: "どのフォルダーからでも vmeltype で使うなら、このフォルダーを PATH に足してください"}
+		Hint: "どのフォルダーからでも vmeltype コマンドを使うなら、このフォルダーを PATH に足してください"}
 }
 
 func sameDir(a, b string) bool {
