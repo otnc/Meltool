@@ -1,14 +1,28 @@
 {
   "name": "vmeltype-repo-tools",
   "private": true,
-  "description": "リポジトリの運用の道具",
+  "description": "開発、検査、ビルドのコマンドと、リポジトリの運用の道具",
   "type": "module",
   "packageManager": "pnpm@12.15.0",
   "engines": {
     "node": ">=24"
   },
   "scripts": {
-    "prepare": "simple-git-hooks"
+    "prepare": "simple-git-hooks",
+    "check": "pnpm run format:check && pnpm run lint && pnpm run build && pnpm run test",
+    "format": "gofmt -w .",
+    "format:check": "node scripts/format-check.mjs",
+    "lint": "go vet ./...",
+    "lint:fix": "go fix ./...",
+    "build": "go build ./...",
+    "test": "go test ./...",
+    "test:race": "go test -race ./...",
+    "commitlint": "commitlint",
+    "dist": "go run ./tools/dist",
+    "installer:build": "pwsh -NoProfile -File .github/scripts/installer-build.ps1",
+    "installer:smoke": "pwsh -NoProfile -File .github/scripts/installer-smoke.ps1",
+    "upstream:portable": "pwsh -NoProfile -File .github/scripts/upstream-portable.ps1",
+    "upstream:standard": "pwsh -NoProfile -File .github/scripts/upstream-standard.ps1"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",
