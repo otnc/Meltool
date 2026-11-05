@@ -1,4 +1,4 @@
-# 本家の通常版を Install.cmd と同じ install.ps1 で入れた環境を、vmeltype が取り込んで切り替えることを通しで確かめる。
+# 本家の通常版を Install.cmd と同じ install.ps1 で入れた環境を、vMeltype が取り込んで切り替えることを通しで確かめる。
 # 利用者の %LOCALAPPDATA% の Meltype と自動起動を書き換え、動いている Meltype も止めるので、GitHub Actions の使い捨ての Windows でだけ動かす。
 # -Ime を付けると、install.ps1 -Ask で Meltype IME も登録し (GitHub Actions は管理者で動き、UAC の確認は出ない)、切り替えで DLL も入れ替わることを確かめる。
 # 付けなければ IME は登録しない (install.ps1 は -Ask を付けなければ登録を求めない)。

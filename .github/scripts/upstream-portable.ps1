@@ -1,4 +1,4 @@
-# 本家の portable 版を使って、vmeltype の取得、切り替え、snapshot、Meltype の終了と起動し直しを通しで確かめる。
+# 本家の portable 版を使って、vMeltype の取得、切り替え、snapshot、Meltype の終了と起動し直しを通しで確かめる。
 # 本家の --exit は同じセッションで動いている Meltype に届き、普段使いの Meltype も止めてしまうので、
 # GitHub Actions の使い捨ての Windows でだけ動かす。
 param(

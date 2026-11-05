@@ -1,4 +1,4 @@
-// Package cli は、vmeltype のコマンドと引数を解釈し、終了コードを決める。
+// Package cli は、vMeltype のコマンドと引数を解釈し、終了コードを決める。
 package cli
 
 import (
@@ -56,7 +56,7 @@ type Env struct {
 	ReplaceIME func(appDir string) (winime.Result, error)
 	// SetDisplayVersion は、本家が「設定 → アプリ」に登録した、インストール先が appDir の Meltype の項目のバージョンを書き換える。登録がなければ何もしない。
 	SetDisplayVersion func(appDir, version string) (bool, error)
-	// Executable は、いま動いている vmeltype の実行ファイルのパスを返す。app update が置き換える。
+	// Executable は、いま動いている vMeltype の実行ファイルのパスを返す。app update が置き換える。
 	Executable func() (string, error)
 	// FindInstallation は、このユーザーにインストーラーで入れた vMeltype を返す。nil なら、インストーラーで入れたものはないとみなす。
 	FindInstallation func() (selfinstall.Installation, bool, error)
