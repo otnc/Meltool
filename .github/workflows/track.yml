@@ -1,0 +1,36 @@
+name: 追従の登録の検査
+
+# 追従の処理を、本物のタスク スケジューラーに登録し、動かし、外すまでを、使い捨ての Windows で通す。
+# 利用者のタスク スケジューラーを書き換えるので、手元では動かさない
+on:
+  pull_request:
+    paths:
+      - .github/workflows/track.yml
+      - .github/scripts/track-smoke.ps1
+      - .github/actions/**
+      - internal/scheduler/**
+      - internal/cli/track.go
+      - cmd/vmeltype/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: タスク スケジューラーへの登録
+    runs-on: windows-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - run: |
+          pnpm dist -version 0.0.0-check -goos windows -goarch amd64 -out "$env:RUNNER_TEMP\dist"
+          if ($LASTEXITCODE -ne 0) { throw 'ビルドに失敗しました' }
+      - name: 通しで動かす
+        run: |
+          pnpm track:smoke -Vmeltype "$env:RUNNER_TEMP\dist\vMeltype-0.0.0-check-windows\vmeltype.exe"
+          if ($LASTEXITCODE -ne 0) { throw '追従の登録の検査が失敗しました' }

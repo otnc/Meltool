@@ -22,7 +22,8 @@
     "installer:build": "pwsh -NoProfile -File .github/scripts/installer-build.ps1",
     "installer:smoke": "pwsh -NoProfile -File .github/scripts/installer-smoke.ps1",
     "upstream:portable": "pwsh -NoProfile -File .github/scripts/upstream-portable.ps1",
-    "upstream:standard": "pwsh -NoProfile -File .github/scripts/upstream-standard.ps1"
+    "upstream:standard": "pwsh -NoProfile -File .github/scripts/upstream-standard.ps1",
+    "track:smoke": "pwsh -NoProfile -File .github/scripts/track-smoke.ps1"
   },
   "devDependencies": {
     "@commitlint/cli": "^21.2.4",

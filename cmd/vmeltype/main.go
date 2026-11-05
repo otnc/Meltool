@@ -18,8 +18,11 @@ import (
 	"github.com/otnc/vmeltype/internal/choose"
 	"github.com/otnc/vmeltype/internal/cli"
 	"github.com/otnc/vmeltype/internal/keyinput"
+	"github.com/otnc/vmeltype/internal/lifecycle"
+	"github.com/otnc/vmeltype/internal/notify"
 	"github.com/otnc/vmeltype/internal/osproc"
 	"github.com/otnc/vmeltype/internal/rootdir"
+	"github.com/otnc/vmeltype/internal/scheduler"
 	"github.com/otnc/vmeltype/internal/selfinstall"
 	"github.com/otnc/vmeltype/internal/upstreamreg"
 	"github.com/otnc/vmeltype/internal/upstreamremove"
@@ -79,11 +82,17 @@ func main() {
 		RegisterIME: func(appDir string) (winime.Result, error) {
 			return winime.Register(ctx, appDir)
 		},
-		Executable:         os.Executable,
-		FindInstallation:   selfinstall.Find,
-		RunSetup:           selfinstall.RunSetup,
-		StartUninstaller:   selfinstall.StartUninstaller,
-		SetDisplayVersion:  upstreamreg.SetDisplayVersion,
+		Executable:        os.Executable,
+		FindInstallation:  selfinstall.Find,
+		RunSetup:          selfinstall.RunSetup,
+		StartUninstaller:  selfinstall.StartUninstaller,
+		SetDisplayVersion: upstreamreg.SetDisplayVersion,
+		RegisterTrack: func(exe, root string, interval time.Duration) (lifecycle.TrackRegistration, error) {
+			return scheduler.Register(scheduler.Job{Executable: exe, Root: root, Interval: interval})
+		},
+		UnregisterTrack:    scheduler.Unregister,
+		RequestPush:        notify.Request,
+		Push:               notify.Send,
 		AddToUserPath:      selfinstall.AddToUserPath,
 		RemoveFromUserPath: selfinstall.RemoveFromUserPath,
 		RemoveMeltype: func(appDir, fallbackScript string, interactive bool) error {

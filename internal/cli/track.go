@@ -80,6 +80,10 @@ func runTrackEnable(env *Env) func(*cobra.Command, []string) error {
 		if err != nil {
 			return err
 		}
+		// スケジューラーは別のフォルダーから動かすので、管理ルートは絶対パスで登録する
+		if root, err = filepath.Abs(root); err != nil {
+			return err
+		}
 		lock, err := lifecycle.AcquireLock(root)
 		if err != nil {
 			return err
