@@ -61,21 +61,9 @@ jobs:
             echo "$sha は main への push の CI が通っていません"; exit 1
           fi
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-          cache-dependency-path: go.mod
+      - uses: ./.github/actions/setup
       - name: 配布物を作る
-        env:
-          GOOS: windows
-          GOARCH: amd64
-          CGO_ENABLED: "0"
-        run: |
-          name="vMeltype-$VERSION-windows"
-          mkdir -p "dist/$name"
-          go build -trimpath -ldflags "-s -w -X main.version=$VERSION" -o "dist/$name/vmeltype.exe" ./cmd/vmeltype
-          cp LICENSE "dist/$name/LICENSE.txt"
-          (cd "dist/$name" && zip -X -q "../$name.zip" vmeltype.exe LICENSE.txt)
+        run: pnpm dist -version "$VERSION" -goos windows -goarch amd64 -zip
       # インストーラーには、ZIP と同じ vmeltype.exe を入れる
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -95,12 +83,17 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.build.outputs.sha }}
+      - uses: ./.github/actions/setup
+        with:
+          go: "false"
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: dist
           path: dist
       - name: インストーラーを作る
-        run: ./.github/scripts/installer-build.ps1 -Version $env:VERSION -SourceDir "dist\vMeltype-$env:VERSION-windows" -OutputDir setup
+        run: |
+          pnpm installer:build -Version $env:VERSION -SourceDir "dist\vMeltype-$env:VERSION-windows" -OutputDir setup
+          if ($LASTEXITCODE -ne 0) { throw 'インストーラーを作れませんでした' }
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: setup

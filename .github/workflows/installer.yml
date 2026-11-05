@@ -7,6 +7,9 @@ on:
     paths:
       - .github/workflows/installer.yml
       - .github/scripts/installer-*.ps1
+      - .github/actions/**
+      - package.json
+      - tools/dist/**
       - installer/**
       - internal/selfinstall/**
       - internal/cli/appuninstall.go
@@ -28,23 +31,20 @@ jobs:
       VERSION: 0.0.0-check
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-          cache-dependency-path: go.mod
+      - uses: ./.github/actions/setup
       - name: vmeltype.exe を作る
         run: |
-          $source = "$env:RUNNER_TEMP\source"
-          New-Item -ItemType Directory -Force -Path $source | Out-Null
-          go build -ldflags "-X main.version=$env:VERSION" -o "$source\vmeltype.exe" ./cmd/vmeltype
+          pnpm dist -version $env:VERSION -goos windows -goarch amd64 -out "$env:RUNNER_TEMP\dist"
           if ($LASTEXITCODE -ne 0) { throw 'ビルドに失敗しました' }
-          Copy-Item LICENSE "$source\LICENSE.txt"
       - name: インストーラーを作る
         run: |
-          $setup = ./.github/scripts/installer-build.ps1 -Version $env:VERSION -SourceDir "$env:RUNNER_TEMP\source" -OutputDir "$env:RUNNER_TEMP\dist"
-          "SETUP=$setup" >> $env:GITHUB_ENV
+          pnpm installer:build -Version $env:VERSION -SourceDir "$env:RUNNER_TEMP\dist\vMeltype-$env:VERSION-windows" -OutputDir "$env:RUNNER_TEMP\setup"
+          if ($LASTEXITCODE -ne 0) { throw 'インストーラーを作れませんでした' }
+          "SETUP=$env:RUNNER_TEMP\setup\vMeltype-$env:VERSION-setup.exe" >> $env:GITHUB_ENV
       - name: 通しで動かす
-        run: ./.github/scripts/installer-smoke.ps1 -Setup $env:SETUP -Version $env:VERSION
+        run: |
+          pnpm installer:smoke -Setup $env:SETUP -Version $env:VERSION
+          if ($LASTEXITCODE -ne 0) { throw '通しの検査が失敗しました' }
       - name: インストーラーのログを残す
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

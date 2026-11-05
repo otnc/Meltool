@@ -5,7 +5,7 @@ import "strings"
 // PathWith は、; で区切った Windows の PATH の paths に、dir がなければ末尾に足したものを返す。足したかも返す。
 // ほかの項目は、順も書き方 (%USERPROFILE% などの展開前の形) も変えない。
 func PathWith(paths, dir string) (string, bool) {
-	for _, entry := range strings.Split(paths, ";") {
+	for entry := range strings.SplitSeq(paths, ";") {
 		if sameDir(entry, dir) {
 			return paths, false
 		}

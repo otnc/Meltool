@@ -122,7 +122,7 @@ func validateName(name string) error {
 	if clean == ".." || strings.HasPrefix(clean, "../") {
 		return unsafe("展開先の外を指します")
 	}
-	for _, element := range strings.Split(strings.TrimSuffix(name, "/"), "/") {
+	for element := range strings.SplitSeq(strings.TrimSuffix(name, "/"), "/") {
 		switch {
 		case element == "..":
 			return unsafe("親のディレクトリを指します")

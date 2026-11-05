@@ -8,7 +8,8 @@ vMeltype の開発に参加する人に向けた決まりと手順です。文�
 
 - Git
 - Go。バージョンは `go.mod` の `go` の行に書いたものを使います
-- Node.js と pnpm。コミットメッセージの検査 (commitlint) だけに使い、製品には含めません。Node.js のバージョンは `.nvmrc`、pnpm のバージョンは `package.json` の `packageManager` に書いています
+- Node.js と pnpm。開発、検査、ビルドのコマンドを `package.json` の `scripts` にまとめていて、それを動かすのに使います。製品には含めません。Node.js のバージョンは `.nvmrc`、pnpm のバージョンは `package.json` の `packageManager` に書いています
+- PowerShell 7 (`pwsh`)。インストーラーと、本家との通しの検査のコマンドだけに使います
 
 ### 初回の手順
 
@@ -16,19 +17,29 @@ vMeltype の開発に参加する人に向けた決まりと手順です。文�
 git clone https://github.com/otnc/vMeltype.git
 cd vMeltype
 pnpm install
-go build ./...
+pnpm run build
 ```
 
 `pnpm install` のときに、コミットメッセージを検査する Git のフック (simple-git-hooks) も入ります。
 
 ### よく使うコマンド
 
+コマンドは `package.json` の `scripts` にまとめていて、CI も同じものを使います。Windows、macOS、Linux で同じように動きます。
+
 | コマンド | 内容 |
 | --- | --- |
-| `gofmt -l .` | 整形が要るファイルを表示する。`gofmt -w .` で整形する |
-| `go vet ./...` | 静的な検査 |
-| `go test ./...` | 単体テスト。`go test -race ./...` で競合も調べる |
-| `go build ./...` | ビルド |
+| `pnpm run check` | 整形の確認、静的な検査、ビルド、単体テストをまとめて動かす。変更を終えたらこれが通ることを確かめる |
+| `pnpm run format` | 整形する (`gofmt -w .`) |
+| `pnpm run format:check` | 整形が要るファイルがあれば、表示して失敗する |
+| `pnpm run lint` | 静的な検査 (`go vet ./...`) |
+| `pnpm run lint:fix` | 古い書き方を新しい書き方に直す (`go fix ./...`) |
+| `pnpm run build` | ビルド (`go build ./...`) |
+| `pnpm test` | 単体テスト (`go test ./...`) |
+| `pnpm run test:race` | 競合も調べる単体テスト (`go test -race ./...`) |
+| `pnpm dist -version <バージョン> [-goos <OS> -goarch <CPU>] [-zip]` | 配布物 (`dist/vMeltype-<バージョン>-<platform>/`、`-zip` で ZIP も) を作る |
+| `pnpm installer:build -Version <バージョン> -SourceDir <配布物> -OutputDir <置き場所>` | Windows のインストーラーを作る。Inno Setup が要る |
+| `pnpm installer:smoke`、`pnpm upstream:portable`、`pnpm upstream:standard` | インストーラーと本家との通しの検査。利用者の環境を書き換えるので、GitHub Actions の中でだけ動く |
+| `pnpm commitlint` | コミットメッセージの検査 |
 
 ## 作業の流れ
 
