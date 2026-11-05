@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/otnc/vmeltype/internal/assets"
+	"github.com/otnc/vmeltype/internal/lifecycle"
 	"github.com/otnc/vmeltype/internal/prompt"
 	"github.com/otnc/vmeltype/internal/selfinstall"
 	"github.com/otnc/vmeltype/internal/selfupdate"
@@ -64,6 +65,12 @@ type Env struct {
 	RunSetup func(ctx context.Context, setup string) error
 	// StartUninstaller は、vMeltype のアンインストーラーを画面なしで起動し、終わるのを待たない。
 	StartUninstaller func(selfinstall.Installation) error
+	// RegisterTrack は、追従の処理 (exe track run --root root) を、interval ごとに動くよう OS のスケジューラーに登録する。UnregisterTrack は、その登録を外す。
+	RegisterTrack   func(exe, root string, interval time.Duration) (lifecycle.TrackRegistration, error)
+	UnregisterTrack func(lifecycle.TrackRegistration) error
+	// RequestPush は、OS の通知を出してよいかを確かめ、必要なら OS に許可を求める。Push は、OS の通知を出す。
+	RequestPush func() error
+	Push        func(title, body string) error
 	// AddToUserPath と RemoveFromUserPath は、利用者の PATH にフォルダーを足す、外す。vMeltype のインストーラーとアンインストーラーから呼ばれたときだけ使う。
 	AddToUserPath, RemoveFromUserPath func(dir string) error
 	// RemoveMeltype は、通常版の Meltype を本家のアンインストーラーで削除する。fallbackScript は、インストール先にアンインストーラーがないときに使う uninstall.ps1。

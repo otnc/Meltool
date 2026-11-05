@@ -79,9 +79,10 @@ func commandSpecs(env *Env) []commandSpec {
 		{use: "run", short: "有効なバージョンの Meltype を起動する。通信しない", run: runRun(env)},
 		{use: "detach", short: "いまの Meltype を残して管理をやめる。通信しない", long: detachLong, flags: change, setup: setupDetachFlags, run: runDetach(env)},
 		{use: "track", short: "新しいバージョンへの自動の追従", subs: []commandSpec{
-			{use: "status", short: "追従の設定を表示する", flags: []commonFlag{flagJSON}},
-			{use: "enable", short: "追従を有効にする", flags: []commonFlag{flagJSON}},
-			{use: "disable", short: "追従を無効にする", flags: []commonFlag{flagJSON}},
+			{use: "status", short: "追従の設定と、最後に確かめた結果を表示する。通信しない", flags: []commonFlag{flagJSON}, run: runTrackStatus(env)},
+			{use: "enable", short: "追従を有効にし、OS のスケジューラーに登録する", long: trackEnableLong, flags: []commonFlag{flagJSON}, setup: setupTrackEnableFlags, run: runTrackEnable(env)},
+			{use: "disable", short: "追従を無効にし、OS のスケジューラーへの登録を外す", flags: []commonFlag{flagJSON}, run: runTrackDisable(env)},
+			{use: "run", short: "追従の処理を 1 回動かす。OS のスケジューラーが呼ぶ", flags: change, setup: hideCommand, run: runTrackRun(env)},
 		}},
 		{use: "app", aliases: []string{"self"}, short: "vMeltype 自身の操作", subs: []commandSpec{
 			{use: "version", short: "vMeltype のバージョンを表示する", run: printVersion(env.Version)},

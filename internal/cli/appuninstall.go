@@ -183,6 +183,10 @@ func runAppUninstall(env *Env) func(*cobra.Command, []string) error {
 			}
 		}
 
+		if _, err := disableTrack(env, root); err != nil {
+			return fmt.Errorf("%w。管理ルートは消していません", err)
+		}
+
 		// 排他のファイルも管理ルートにあり、開いたままでは消せない
 		lock.Release()
 		locked = false
