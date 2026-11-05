@@ -7,6 +7,9 @@ on:
     paths:
       - .github/workflows/upstream.yml
       - .github/scripts/upstream-*.ps1
+      - .github/actions/**
+      - package.json
+      - tools/dist/**
   workflow_dispatch:
     inputs:
       from:
@@ -29,11 +32,11 @@ jobs:
       matrix:
         include:
           - name: portable 版
-            script: upstream-portable.ps1
+            script: upstream:portable
           - name: 通常版
-            script: upstream-standard.ps1
+            script: upstream:standard
           - name: 通常版 (IME あり)
-            script: upstream-standard.ps1
+            script: upstream:standard
             ime: true
     runs-on: windows-latest
     timeout-minutes: 20
@@ -42,11 +45,10 @@ jobs:
         shell: pwsh
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-          cache-dependency-path: go.mod
-      - run: go build -o "$env:RUNNER_TEMP\vmeltype.exe" ./cmd/vmeltype
+      - uses: ./.github/actions/setup
+      - run: |
+          pnpm dist -version 0.0.0-check -goos windows -goarch amd64 -out "$env:RUNNER_TEMP\dist"
+          if ($LASTEXITCODE -ne 0) { throw 'ビルドに失敗しました' }
       - name: 通しで動かす
         env:
           # 公式一覧の取得で、API の利用回数の上限に当たりにくくする
@@ -57,9 +59,10 @@ jobs:
           SCRIPT: ${{ matrix.script }}
           IME: ${{ matrix.ime || false }}
         run: |
-          $arguments = @{ Vmeltype = "$env:RUNNER_TEMP\vmeltype.exe"; From = $env:FROM; To = $env:TO }
-          if ($env:IME -eq 'true') { $arguments.Ime = $true }
-          & "./.github/scripts/$env:SCRIPT" @arguments
+          $arguments = @('-Vmeltype', "$env:RUNNER_TEMP\dist\vMeltype-0.0.0-check-windows\vmeltype.exe", '-From', $env:FROM, '-To', $env:TO)
+          if ($env:IME -eq 'true') { $arguments += '-Ime' }
+          pnpm run $env:SCRIPT @arguments
+          if ($LASTEXITCODE -ne 0) { throw "$env:SCRIPT が失敗しました" }
       - name: Meltype のログを残す
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
