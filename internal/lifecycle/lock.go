@@ -3,6 +3,8 @@ package lifecycle
 import (
 	"errors"
 	"fmt"
+	"io/fs"
+	"os"
 	"path/filepath"
 
 	"github.com/gofrs/flock"
@@ -33,6 +35,16 @@ func AcquireLock(root string) (*Lock, error) {
 		return nil, ErrLocked
 	}
 	return &Lock{file: f}, nil
+}
+
+// AcquireLockIfManaged は、管理ルートに state があれば AcquireLock と同じく排他を取る。state がなければ、変えるものがないので何も作らずに nil を返す。
+func AcquireLockIfManaged(root string) (*Lock, error) {
+	if _, err := os.Stat(stateDir(root)); errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	} else if err != nil {
+		return nil, err
+	}
+	return AcquireLock(root)
 }
 
 // Release は、排他を解く。

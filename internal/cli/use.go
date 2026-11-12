@@ -231,15 +231,16 @@ func runRecover(env *Env) func(*cobra.Command, []string) error {
 		if err != nil {
 			return err
 		}
-		lock, err := lifecycle.AcquireLock(root)
+		lock, err := lifecycle.AcquireLockIfManaged(root)
 		if err != nil {
 			return err
 		}
-		defer lock.Release()
-
-		plan, err := lifecycle.PlanRecover(root)
-		if err != nil {
-			return err
+		var plan *lifecycle.RecoverPlan
+		if lock != nil {
+			defer lock.Release()
+			if plan, err = lifecycle.PlanRecover(root); err != nil {
+				return err
+			}
 		}
 		out := cmd.OutOrStdout()
 		if plan == nil {

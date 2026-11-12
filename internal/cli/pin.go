@@ -26,9 +26,12 @@ func runPin(env *Env) func(*cobra.Command, []string) error {
 		if err != nil {
 			return err
 		}
-		lock, err := lifecycle.AcquireLock(root)
+		lock, err := lifecycle.AcquireLockIfManaged(root)
 		if err != nil {
 			return err
+		}
+		if lock == nil {
+			return lifecycle.ErrNoActive
 		}
 		defer lock.Release()
 		// 中断した変更が残っていると、どのバージョンが有効なのかが決まっていない
@@ -74,15 +77,16 @@ func runUnpin(env *Env) func(*cobra.Command, []string) error {
 		if err != nil {
 			return err
 		}
-		lock, err := lifecycle.AcquireLock(root)
+		lock, err := lifecycle.AcquireLockIfManaged(root)
 		if err != nil {
 			return err
 		}
-		defer lock.Release()
-
-		removed, err := lifecycle.Unpin(root)
-		if err != nil {
-			return err
+		removed := false
+		if lock != nil {
+			defer lock.Release()
+			if removed, err = lifecycle.Unpin(root); err != nil {
+				return err
+			}
 		}
 		out := cmd.OutOrStdout()
 		if asJSON {

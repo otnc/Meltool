@@ -228,14 +228,16 @@ func applyPending(cmd *cobra.Command, env *Env, root string, pending lifecycle.P
 }
 
 func discardPending(cmd *cobra.Command, root string, dryRun, asJSON bool) error {
-	lock, err := lifecycle.AcquireLock(root)
+	lock, err := lifecycle.AcquireLockIfManaged(root)
 	if err != nil {
 		return err
 	}
-	defer lock.Release()
-	pending, err := lifecycle.LoadPending(root)
-	if err != nil {
-		return err
+	var pending *lifecycle.Pending
+	if lock != nil {
+		defer lock.Release()
+		if pending, err = lifecycle.LoadPending(root); err != nil {
+			return err
+		}
 	}
 	out := cmd.OutOrStdout()
 	if pending != nil && !dryRun {

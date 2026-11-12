@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -28,6 +30,8 @@ var reasonLabels = map[snapshot.Reason]string{
 	snapshot.ReasonBeforeRestore: "復元の前",
 	snapshot.ReasonBeforeUse:     "切り替えの前",
 }
+
+var errNoActiveNoData = errors.New("有効なバージョンがなく、保存するデータもありません。先に \"vmeltype use <tag>\" で有効にしてください")
 
 // portableDataDir は、portable 版の data の場所を返す。本家の portable 版は、Meltype.exe の隣の data を使う。
 func portableDataDir(root string) string {
@@ -72,6 +76,12 @@ func runSnapshotCreate(env *Env) func(*cobra.Command, []string) error {
 			return err
 		}
 		dataDir, appDir := place.dataDir, place.appDir
+		// 有効なバージョンのないときのデータ先は管理ルートの下なので、管理ルートがなければ保存するものもない
+		if !place.active {
+			if _, err := os.Stat(root); errors.Is(err, fs.ErrNotExist) {
+				return errNoActiveNoData
+			}
+		}
 		app, err := inspectApp(cmd, env, root, appDir)
 		if err != nil {
 			return err
@@ -111,7 +121,7 @@ func runSnapshotCreate(env *Env) func(*cobra.Command, []string) error {
 		}
 		m, err := snapshot.Create(root, dataDir, snapshot.Meta{Reason: snapshot.ReasonManual, ActiveTag: activeTag(root)}, env.Now())
 		if errors.Is(err, snapshot.ErrNoData) && !place.active {
-			return errors.New("有効なバージョンがなく、保存するデータもありません。先に \"vmeltype use <tag>\" で有効にしてください")
+			return errNoActiveNoData
 		}
 		if errors.Is(err, snapshot.ErrNoData) {
 			return fmt.Errorf("%s (%s) がないので、保存するものがありません", place.dataLabel(), dataDir)
