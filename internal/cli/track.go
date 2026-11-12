@@ -128,14 +128,16 @@ func runTrackDisable(env *Env) func(*cobra.Command, []string) error {
 		if err != nil {
 			return err
 		}
-		lock, err := lifecycle.AcquireLock(root)
+		lock, err := lifecycle.AcquireLockIfManaged(root)
 		if err != nil {
 			return err
 		}
-		defer lock.Release()
-		changed, err := disableTrack(env, root)
-		if err != nil {
-			return err
+		changed := false
+		if lock != nil {
+			defer lock.Release()
+			if changed, err = disableTrack(env, root); err != nil {
+				return err
+			}
 		}
 		if asJSON {
 			return writeJSON(cmd.OutOrStdout(), map[string]any{"changed": changed})
