@@ -43,6 +43,8 @@ type commandSpec struct {
 	subs    []commandSpec
 	// setup は、そのコマンドだけのオプションを足す。
 	setup func(cmd *cobra.Command)
+	// complete は、シェルの補完で引数の候補を返す。nil なら、ファイル名を補う。
+	complete cobra.CompletionFunc
 }
 
 func commandSpecs(env *Env) []commandSpec {
@@ -53,9 +55,9 @@ func commandSpecs(env *Env) []commandSpec {
 		{use: "fetch", short: "公式のリリースの情報だけを取得して保存する。配布物は取得しない", flags: []commonFlag{flagJSON}, run: runFetch(env)},
 		{use: "releases", aliases: []string{"rel"}, short: "公式のリリースの一覧を取得して表示する", long: releasesLong, flags: []commonFlag{flagAll, flagOffline, flagJSON}, setup: setupReleasesFlags, run: runReleases(env)},
 		{use: "install [tag]", aliases: []string{"i"}, short: "バージョンを取得、検証して保持する。有効なバージョンは変えない", long: installLong, args: maxArgs(1), flags: append([]commonFlag{flagOffline}, change...), setup: setupInstallFlags, run: runInstall(env)},
-		{use: "use [tag]", aliases: []string{"u"}, short: "保持バージョンを有効にする。通信しない", long: useLong, args: maxArgs(1), flags: append([]commonFlag{flagForce}, change...), setup: setupUseFlags, run: runUse(env)},
+		{use: "use [tag]", aliases: []string{"u"}, short: "保持バージョンを有効にする。通信しない", long: useLong, args: maxArgs(1), flags: append([]commonFlag{flagForce}, change...), setup: setupUseFlags, complete: completeStoredTags(env, false), run: runUse(env)},
 		{use: "apply", short: "適用待ちのバージョンを適用するか、有効なバージョンを修復する。通信しない", long: applyLong, flags: append([]commonFlag{flagForce}, change...), setup: setupApplyFlags, run: runApply(env)},
-		{use: "uninstall <tag>", aliases: []string{"un"}, short: "有効でない保持バージョンを削除する。バージョンは省略せずに指定する。実行先と data には触れない", args: exactArgs(1), flags: change, setup: setupUninstallFlags, run: runUninstall(env)},
+		{use: "uninstall <tag>", aliases: []string{"un"}, short: "有効でない保持バージョンを削除する。バージョンは省略せずに指定する。実行先と data には触れない", args: exactArgs(1), flags: change, setup: setupUninstallFlags, complete: completeStoredTags(env, true), run: runUninstall(env)},
 		{use: "check", short: "新しいバージョンがあるかを確かめる。適用しない", flags: []commonFlag{flagJSON}, setup: setupCheckFlags, run: runCheck(env)},
 		{use: "update", aliases: []string{"up", "upgrade"}, short: "新しいバージョンを取得して有効にする", long: updateLong, flags: change, setup: setupUpdateFlags, run: runUpdate(env)},
 		{use: "pin [tag]", short: "有効なバージョンを固定する。通信しない", long: pinLong, args: maxArgs(1), flags: []commonFlag{flagJSON}, run: runPin(env)},
@@ -84,6 +86,7 @@ func commandSpecs(env *Env) []commandSpec {
 			{use: "disable", short: "追従を無効にし、OS のスケジューラーへの登録を外す", flags: []commonFlag{flagJSON}, run: runTrackDisable(env)},
 			{use: "run", short: "追従の処理を 1 回動かす。OS のスケジューラーが呼ぶ", flags: change, setup: hideCommand, run: runTrackRun(env)},
 		}},
+		{use: "completion <shell>", short: "シェルの補完のスクリプトを出す。通信しない", long: completionLong, args: completionArgs, complete: completeShells, run: runCompletion},
 		{use: "app", aliases: []string{"self"}, short: "vMeltype 自身の操作", subs: []commandSpec{
 			{use: "version", short: "vMeltype のバージョンを表示する", run: printVersion(env.Version)},
 			{use: "doctor", short: "vMeltype 自身と管理ルートを診断し、直し方を示す。通信しない", long: appDoctorLong, flags: []commonFlag{flagJSON}, run: runAppDoctor(env)},
@@ -107,6 +110,7 @@ func buildCommand(spec commandSpec) *cobra.Command {
 		Long:                  spec.long,
 		Args:                  spec.args,
 		RunE:                  spec.run,
+		ValidArgsFunction:     spec.complete,
 		DisableFlagsInUseLine: true,
 	}
 	for _, flag := range spec.flags {
