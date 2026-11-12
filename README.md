@@ -65,6 +65,17 @@ vmeltype app update         # vMeltype 自身を新しいバージョンにす�
 
 設定、保持バージョン、スナップショットは管理ルート (既定は `%LOCALAPPDATA%\vMeltype`) に置きます。
 
+## シェルの補完
+
+`vmeltype completion <シェル>` で、コマンド、オプション、`use` と `uninstall` のバージョンを補うスクリプトを出します。バージョンは保持しているものから補い、通信しません。使うシェルの設定に、次の 1 行を書きます。
+
+| シェル | 書く場所 | 書くこと |
+| --- | --- | --- |
+| PowerShell | `$PROFILE` | `vmeltype completion powershell \| Out-String \| Invoke-Expression` |
+| bash | `~/.bashrc` | `source <(vmeltype completion bash)` |
+| zsh | `~/.zshrc` (`compinit` より後) | `source <(vmeltype completion zsh)` |
+| fish | `~/.config/fish/config.fish` | `vmeltype completion fish \| source` |
+
 ## 新しいバージョンに自動で追従する
 
 ```powershell

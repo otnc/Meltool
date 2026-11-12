@@ -138,6 +138,10 @@ func RunContext(ctx context.Context, args []string, env Env) int {
 			selfupdate.Cleanup(exe)
 		}
 	}
+	// シェルの補完が呼ぶときは、標準エラーを捨てる。PowerShell の補完は捨てきれず、入力中の画面に出てしまう
+	if len(args) > 0 && (args[0] == cobra.ShellCompRequestCmd || args[0] == cobra.ShellCompNoDescRequestCmd) {
+		env.Err = io.Discard
+	}
 	root := newRootCommand(&env)
 	root.SetArgs(args)
 	root.SetIn(env.In)
@@ -181,6 +185,7 @@ install で取得して保持し、use で有効にします。use、list、curr
 	// v はバージョンの指定と紛らわしいので、--version の短縮形にしない
 	root.Flags().Bool("version", false, "vMeltype のバージョンを表示する")
 	root.PersistentFlags().String("root", "", "vMeltype の管理ルート (設定、保持バージョン、スナップショットを置く場所)")
+	root.MarkPersistentFlagDirname("root")
 	root.SetVersionTemplate("vMeltype {{.Version}}\n")
 	root.SetFlagErrorFunc(func(_ *cobra.Command, err error) error {
 		return usageError{fmt.Errorf("オプションの誤り: %w", err)}

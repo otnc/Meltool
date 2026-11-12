@@ -10,7 +10,7 @@ import (
 func TestCommandsThatChangeNothingDoNotCreateRoot(t *testing.T) {
 	for _, args := range [][]string{
 		{"current"}, {"list"}, {"status"}, {"doctor"}, {"snapshot", "list"}, {"app", "config", "show"}, {"track", "status"},
-		{"pin"}, {"unpin"}, {"recover"}, {"recover", "-n"}, {"rollback", "-y"}, {"apply", "-y"}, {"apply", "--discard"},
+		{"pin"}, {"unpin"}, {"__complete", "use", ""}, {"__complete", "uninstall", ""}, {"recover"}, {"recover", "-n"}, {"rollback", "-y"}, {"apply", "-y"}, {"apply", "--discard"},
 		{"snapshot", "create"}, {"snapshot", "prune", "-y"}, {"track", "disable"}, {"detach", "-y"}, {"use", "-y"}, {"uninstall", "1.4.0", "-y"},
 	} {
 		t.Run(strings.Join(args, " ")+" は管理ルートを作らない", func(t *testing.T) {
